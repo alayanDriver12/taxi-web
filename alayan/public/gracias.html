@@ -1,0 +1,12 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reserva · Alayan Driver</title>
+<style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0A0A0A;color:#F7F3ED;font-family:Inter,system-ui,sans-serif;text-align:center;padding:24px}
+h1{font-family:'Cormorant Garamond',serif;font-size:44px;margin:0 0 12px}p{color:#ffffffa0;max-width:460px;margin:0 auto 24px}a{color:#C5A46A}</style></head>
+<body><div><h1 id="t">Comprobando pago…</h1><p id="m"></p><a href="/">Volver a la web</a></div>
+<script>
+const id=new URLSearchParams(location.search).get('b');
+fetch('/api/bookings/'+id+'/status').then(r=>r.json()).then(d=>{
+ const ok=d.payment_status==='pagado';
+ t.textContent=ok?'¡Reserva confirmada!':'Reserva recibida';
+ m.textContent=ok?'Pago recibido. Te enviaremos la confirmación por WhatsApp y email. Reserva nº '+d.id+'.':'Estamos verificando tu pago. Te confirmaremos en breve. Reserva nº '+d.id+'.';
+}).catch(()=>{t.textContent='Reserva recibida';m.textContent='Te contactaremos en breve.'});
+</script></body></html>
