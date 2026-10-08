@@ -55,6 +55,10 @@ con la cuenta `alayan.driver@gmail.com`, proyecto `alayan-driver`, servicio `tax
 El proyecto antiguo (`meticulous-vitality`, en la cuenta del desarrollador) queda obsoleto: borrarlo cuando el nuevo
 esté validado.
 
+Despliegue automático: cada entorno tiene su *deployment trigger* (staging → `develop`, production → `main`). Si un push
+no despliega, comprobar con la query `deploymentTriggers` y que la cuenta de GitHub del cliente sigue conectada en Railway
+(sin acceso, la API responde «no one in the project has access to it»).
+
 CLI: `railway link --project alayan-driver --environment staging --service taxi-web` (sesión con la cuenta del
 cliente). En PowerShell 5.1 la CLI pierde las comillas del JSON: escribir consultas y variables en archivos y usar
 `railway api --file x.graphql --variables @x.json`. Borrar servicios o volúmenes: en la web.
