@@ -3,7 +3,7 @@
 // ES y EN deben tener siempre la misma estructura.
 
 module.exports = {
-  contact: { whatsapp: '34600000000' },
+  contact: { whatsapp: '34671407527' },
   seo: {
     title: 'Alayan Driver · Transfer en Andalucía',
     description: 'Transfers privados en Sevilla y toda Andalucía. Aeropuertos, estaciones, hoteles y eventos.'
@@ -97,7 +97,7 @@ module.exports = {
       book: 'RESERVAR',
       vatNote: 'Precios con IVA incluido. El precio final se confirma antes del pago.',
       cards: [
-        { name: 'Económico', price: 'Desde 35€', features: ['Vehículo confort', '1-3 pasajeros', 'Aeropuerto / Estación', 'Tracking vuelo incluido'], popular: false },
+        { name: 'Económico', price: 'Desde 35€', features: ['Vehículo confort', '1-4 pasajeros', 'Aeropuerto / Estación', 'Tracking vuelo incluido'], popular: false },
         { name: 'Confort', price: 'Desde 55€', features: ['Ford Alayan híbrido', 'Agua + prensa', 'Cartel bienvenida', 'Cancelación 24h gratis'], popular: true },
         { name: 'VIP', price: 'Desde 90€', features: ['Tesla / Mercedes E', 'Chofer trajeado', 'Disposición por horas', 'Pueblos Blancos y Costa'], popular: false }
       ]
@@ -135,14 +135,14 @@ module.exports = {
         { name: 'EVENTOS', detail: 'SOCIALES Y EMPRESARIALES • BODAS, CONGRESOS' },
         { name: 'PUEBLOS BLANCOS', detail: 'Ronda, Arcos, Zahara, Grazalema...' },
         { name: 'DISPOSICIÓN', detail: 'Granada • Córdoba • Cádiz • Día completo' },
-        { name: 'PORTUGAL', detail: 'Faro • Lisboa • Oporto • Puertos y aeropuertos' },
+        { name: 'PUERTOS DE CRUCEROS', detail: 'Cádiz • Málaga • Huelva • Algeciras' },
         { name: 'VIAJES PRIVADOS', detail: 'Por toda Andalucía, a su ritmo' }
       ]
     },
     booking: {
       badge: 'PAGO SEGURO SUMUP • FACTURA • 24H CANCEL',
       title: 'Reserva con pago seguro SumUp',
-      subtitle: 'Presupuesto inmediato. Pago protegido. Confirmación por WhatsApp.',
+      subtitle: 'Precio al momento. Pago protegido. Confirmación por WhatsApp.',
       includesTitle: 'INCLUYE',
       includes: ['Tracking vuelo', 'Meet & Greet', 'Agua y prensa', 'Silla infantil (5 €)', 'Espera por retraso', 'Cartel personalizado'],
       cancel: 'Política: cancelación gratuita hasta 24h antes. Después, 50%. No-show 100%.',
@@ -358,7 +358,7 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
       book: 'BOOK',
       vatNote: 'Prices include VAT. The final price is confirmed before payment.',
       cards: [
-        { name: 'Economy', price: 'From €35', features: ['Comfort vehicle', '1-3 passengers', 'Airport / Station', 'Flight tracking included'], popular: false },
+        { name: 'Economy', price: 'From €35', features: ['Comfort vehicle', '1-4 passengers', 'Airport / Station', 'Flight tracking included'], popular: false },
         { name: 'Comfort', price: 'From €55', features: ['Ford Alayan hybrid', 'Water + press', 'Welcome sign', 'Free cancellation 24h'], popular: true },
         { name: 'VIP', price: 'From €90', features: ['Tesla / Mercedes E', 'Suited chauffeur', 'Hourly disposal', 'White Villages & Coast'], popular: false }
       ]
@@ -396,14 +396,14 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
         { name: 'EVENTS', detail: 'SOCIAL & CORPORATE • WEDDINGS, CONGRESSES' },
         { name: 'WHITE VILLAGES', detail: 'Ronda, Arcos, Zahara, Grazalema...' },
         { name: 'DISPOSAL', detail: 'Granada • Cordoba • Cadiz • Full day' },
-        { name: 'PORTUGAL', detail: 'Faro • Lisbon • Porto • Ports & airports' },
+        { name: 'CRUISE PORTS', detail: 'Cadiz • Malaga • Huelva • Algeciras' },
         { name: 'PRIVATE TOURS', detail: 'All over Andalusia, at your pace' }
       ]
     },
     booking: {
       badge: 'SECURE SUMUP PAYMENT • INVOICE • 24H CANCEL',
       title: 'Book with secure SumUp payment',
-      subtitle: 'Instant quote. Protected payment. WhatsApp confirmation.',
+      subtitle: 'Instant price. Protected payment. WhatsApp confirmation.',
       includesTitle: 'INCLUDES',
       includes: ['Flight tracking', 'Meet & Greet', 'Water & press', 'Child seat (€5)', 'Waiting for delays', 'Custom welcome sign'],
       cancel: 'Policy: free cancellation up to 24h before. After, 50%. No-show 100%.',
