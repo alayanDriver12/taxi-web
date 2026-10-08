@@ -7,7 +7,7 @@ const crypto = require('node:crypto');
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-function createPayments(db, sumup, { baseUrl }) {
+function createPayments(db, sumup, { baseUrl, onPaid }) {
   db.exec(`
   CREATE TABLE IF NOT EXISTS payments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -75,7 +75,7 @@ function createPayments(db, sumup, { baseUrl }) {
   function publicView(b) {
     const last = q.last.get(b.id);
     const processing = last?.status === 'PENDING';
-    let state = blocker(b) || (last?.status === 'FAILED' ? 'failed' : 'ready');
+    const state = blocker(b) || (last?.status === 'FAILED' ? 'failed' : 'ready');
     return {
       id: b.id, firstName: String(b.name).split(' ')[0],
       origin: b.origin, destination: b.destination, date: b.date, time: b.time,
@@ -110,7 +110,10 @@ function createPayments(db, sumup, { baseUrl }) {
     if (c.status !== p.status || c.transactionCode) q.update.run(c.status, c.transactionCode, p.id);
     if (c.status === 'PAID') {
       if (c.amount != null && Number(c.amount) !== p.amount_eur) console.warn(`⚠️  Pago ${p.checkout_id}: SumUp indica ${c.amount} € y esperábamos ${p.amount_eur} €`);
-      if (q.markPaid.run(p.booking_id).changes) console.log(`💶 Reserva #${p.booking_id} pagada (${p.amount_eur} €, checkout ${p.checkout_id})`);
+      if (q.markPaid.run(p.booking_id).changes) {
+        console.log(`💶 Reserva #${p.booking_id} pagada (${p.amount_eur} €, checkout ${p.checkout_id})`);
+        onPaid?.(q.booking.get(p.booking_id));
+      }
     } else if (c.status === 'FAILED') {
       q.markFailed.run(p.booking_id);
     }

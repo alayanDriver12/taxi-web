@@ -70,5 +70,23 @@ code aparece en el perfil de la cuenta. Ponerlas en Railway como `SUMUP_API_KEY`
 y quitar `SUMUP_MOCK`. Para pruebas sin dinero real, crear una cuenta sandbox (Developer Settings → Sandboxes) y
 usar la tarjeta Visa `4200 0000 0000 0091`. Antes de entregar, una prueba real de pocos euros.
 
+## Avisos al cliente (email y WhatsApp)
+| Momento | Email al cliente | Aviso a Alayan | WhatsApp |
+|---|---|---|---|
+| Llega una solicitud | automático | automático | — |
+| «Enviar presupuesto» | automático | — | botón con el mensaje escrito |
+| Pago completado | automático | automático | — |
+| Se marca confirmada / cancelada | el panel pregunta | — | el panel pregunta |
+| «Avisar al cliente…» | a elección | — | a elección |
+
+Los avisos salen en el idioma en que se hizo la reserva y sus textos se editan en `/admin` → «Avisos al cliente».
+El WhatsApp no se envía solo: se abre WhatsApp con el mensaje escrito y se pulsa enviar (gratis, sin API de Meta).
+Cada email queda registrado en la reserva (enviado, fallido o de prueba).
+
+**Configurar el envío (Resend):** Railway Hobby bloquea el SMTP, por eso se usa la API HTTPS de Resend
+(gratis hasta 3.000 emails/mes). Crear cuenta en resend.com, añadir el dominio y poner en Cloudflare los registros
+DNS que indica (SPF/DKIM); después, en Railway: `RESEND_API_KEY`, `MAIL_FROM="Alayan Driver <reservas@dominio>"` y,
+opcional, `NOTIFY_EMAIL` (si no, los avisos internos van al email de «Datos legales»). Sin clave, modo prueba.
+
 ## Copias de seguridad
 Descarga el CSV desde el panel o copia `/data/alayan.db` y `/data/uploads/`.

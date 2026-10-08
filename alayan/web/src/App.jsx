@@ -83,7 +83,7 @@ export default function App({ content }) {
     if (!accepted) return setFormError(t.booking.mustAccept);
     setSending(true);
     try {
-      const { id } = await sendBooking({ ...form, privacy: true });
+      const { id } = await sendBooking({ ...form, privacy: true, lang });
       setSentId(id);
     } catch (e) {
       setFormError(e.message || t.booking.error);

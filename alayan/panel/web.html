@@ -66,7 +66,7 @@ const SECTION_NAMES = {
   legal: 'Datos legales', general: 'General y SEO', images: 'Imágenes',
   brand: 'Marca', nav: 'Menú', hero: 'Portada', exp: 'Experiencia', slogans: 'Lemas', fleet: 'Flota',
   classes: 'Clases y precios', drivers: 'Conductores', destinations: 'Destinos', services: 'Servicios',
-  booking: 'Reserva', payment: 'Página de pago', footer: 'Pie de página'
+  booking: 'Reserva', payment: 'Página de pago', notify: 'Avisos al cliente', footer: 'Pie de página'
 };
 const IMAGE_NAMES = { logo: 'Logo', hero: 'Portada (imagen principal)', ford: 'Coche 1 (Ford)', tesla: 'Coche 2 (Tesla)' };
 
@@ -106,7 +106,13 @@ const LEGAL_FIELDS = [
 ];
 const LEGAL_REQUIRED = ['owner', 'nif', 'address', 'email', 'phone', 'license'];
 const PATH_LABELS = {
-  'brand.name': 'Nombre de la marca', 'nav.book': 'Botón reservar', 'booking.pay': 'Botón enviar solicitud', 'payment.pay': 'Botón pagar', 'payment.acceptPrefix': 'Casilla: texto inicial', 'payment.title': 'Título', 'payment.pax': 'Etiqueta «pasajeros»', 'payment.luggage': 'Etiqueta «maletas»', 'payment.flight': 'Etiqueta «vuelo»', 'hero.badge': 'Etiqueta sobre la portada',
+  'brand.name': 'Nombre de la marca', 'nav.book': 'Botón reservar', 'notify.signature': 'Firma', 'notify.received': 'Solicitud recibida (automático)',
+  'notify.quote': 'Presupuesto (al pulsar «Enviar presupuesto»)', 'notify.paid': 'Pago recibido (automático)',
+  'notify.confirmed': 'Reserva confirmada (al marcarla en el panel)', 'notify.cancelled': 'Reserva cancelada (al marcarla en el panel)',
+  'notify.received.subject': 'Asunto', 'notify.quote.subject': 'Asunto', 'notify.paid.subject': 'Asunto',
+  'notify.confirmed.subject': 'Asunto', 'notify.cancelled.subject': 'Asunto',
+  'notify.received.body': 'Texto', 'notify.quote.body': 'Texto', 'notify.paid.body': 'Texto',
+  'notify.confirmed.body': 'Texto', 'notify.cancelled.body': 'Texto', 'booking.pay': 'Botón enviar solicitud', 'payment.pay': 'Botón pagar', 'payment.acceptPrefix': 'Casilla: texto inicial', 'payment.title': 'Título', 'payment.pax': 'Etiqueta «pasajeros»', 'payment.luggage': 'Etiqueta «maletas»', 'payment.flight': 'Etiqueta «vuelo»', 'hero.badge': 'Etiqueta sobre la portada',
   'fleet.ford': 'Coche 1 (imagen «Coche 1»)', 'fleet.tesla': 'Coche 2 (imagen «Coche 2»)', 'fleet.tesla.badge': 'Etiqueta en la esquina',
   'slogans.items': 'Etiquetas bajo la flota', 'classes.popular': 'Etiqueta «más reservado»',
   'classes.book': 'Texto del botón (va seguido del nombre de la clase)', 'classes.cards[].popular': 'Destacada (fondo negro y etiqueta)',
@@ -121,6 +127,12 @@ const HINTS = {
   'booking.privacyInfo': '{owner} se sustituye por el titular de «Datos legales». Obligatoria por el RGPD: si la cambias, que siga diciendo responsable, finalidad, legitimación, destinatarios y derechos.',
   'footer.legal.note': 'Solo se muestra en inglés, encima de los textos legales (que están en español).',
   'booking.sent': '{id} se sustituye por el número de reserva.',
+  'notify.received.body': 'Se usa para el email y para el WhatsApp. Puedes usar: {name} nombre, {id} nº de reserva, {amount} precio, {summary} resumen del trayecto, {link} enlace de la reserva.',
+  'notify.quote.body': 'Se usa para el email y para el WhatsApp. Puedes usar: {name} nombre, {id} nº de reserva, {amount} precio, {summary} resumen del trayecto, {link} enlace de la reserva.',
+  'notify.paid.body': 'Se usa para el email y para el WhatsApp. Puedes usar: {name} nombre, {id} nº de reserva, {amount} precio, {summary} resumen del trayecto, {link} enlace de la reserva.',
+  'notify.confirmed.body': 'Se usa para el email y para el WhatsApp. Puedes usar: {name} nombre, {id} nº de reserva, {amount} precio, {summary} resumen del trayecto, {link} enlace de la reserva.',
+  'notify.cancelled.body': 'Se usa para el email y para el WhatsApp. Puedes usar: {name} nombre, {id} nº de reserva, {amount} precio, {summary} resumen del trayecto, {link} enlace de la reserva.',
+  'notify.signature': 'Se añade al final de cada aviso.',
   'payment.hello': '{name} se sustituye por el nombre del cliente.',
   'payment.pay': '{amount} se sustituye por el precio.',
   'payment.paidText': '{id} se sustituye por el número de reserva.',
@@ -189,7 +201,7 @@ function renderField(path, { bare = false } = {}) {
   const input = lang => h('div', { class: 'lang' },
     h(long ? 'textarea' : 'input', {
       value: getAt(state[lang], path) ?? '',
-      rows: long ? 3 : null,
+      rows: long ? Math.min(14, Math.max(3, String(getAt(state[lang], path) ?? '').split(String.fromCharCode(10)).length + 1)) : null,
       oninput: e => { setAt(state[lang], path, e.target.value); refreshDirty(); }
     }),
     h('span', { class: 'lng' }, lang));

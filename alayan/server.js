@@ -8,12 +8,16 @@ const { createAuth, homeFor } = require('./lib/auth');
 const { createContentStore, IMAGE_SLOTS } = require('./lib/content');
 const { createSumUp } = require('./lib/sumup');
 const { createPayments } = require('./lib/payments');
+const { createMailer } = require('./lib/mailer');
+const { createNotifier } = require('./lib/notify');
 
 const {
   PORT = 3000, BASE_URL = `http://localhost:${PORT}`,
   ADMIN_USER = 'admin', ADMIN_PASS = '',
   SUMUP_API_KEY = '', SUMUP_MERCHANT_CODE = '',
   SUMUP_MOCK = 'false', // true = simular SumUp sin cuenta (desarrollo / staging). Se ignora si hay API key.
+  RESEND_API_KEY = '', MAIL_FROM = '', // emails; sin clave se registran pero no se envían
+  NOTIFY_EMAIL = '',                   // dónde recibe Alayan los avisos (por defecto, el email de «Datos legales»)
   DB_PATH = './data/alayan.db'
 } = process.env;
 
@@ -45,6 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings(date);
 // Columnas añadidas después: se crean en BBDD ya existentes
 const bookingCols = db.prepare('PRAGMA table_info(bookings)').all().map(c => c.name);
 if (!bookingCols.includes('privacy_accepted_at')) db.exec('ALTER TABLE bookings ADD COLUMN privacy_accepted_at TEXT'); // prueba de aceptación (RGPD)
+if (!bookingCols.includes('lang')) db.exec("ALTER TABLE bookings ADD COLUMN lang TEXT NOT NULL DEFAULT 'ES'"); // idioma de los avisos
 
 // Conservación (política de privacidad, apartado 4): las solicitudes que no llegaron a contratarse
 // se borran a los 12 meses. Las pagadas o confirmadas se conservan por obligaciones contables y fiscales.
@@ -61,7 +66,10 @@ setInterval(purgeStaleBookings, 24 * 60 * 60 * 1000).unref();
 const auth = createAuth(db, { secure: BASE_URL.startsWith('https://') });
 const content = createContentStore(db);
 const sumup = createSumUp({ apiKey: SUMUP_API_KEY, merchantCode: SUMUP_MERCHANT_CODE, mock: SUMUP_MOCK === 'true', baseUrl: BASE_URL });
-const payments = createPayments(db, sumup, { baseUrl: BASE_URL });
+const payments = createPayments(db, sumup, { baseUrl: BASE_URL, onPaid: b => notifier.bookingPaid(b) });
+const mailer = createMailer(db, { apiKey: RESEND_API_KEY, from: MAIL_FROM, siteUrl: BASE_URL, brand: 'ALAYAN DRIVER' });
+const notifier = createNotifier({ content, mailer, payments, baseUrl: BASE_URL, notifyEmail: NOTIFY_EMAIL });
+console.log(mailer.mode === 'real' ? '✉️  Email: Resend conectado' : '✉️  Email: MODO PRUEBA — se registran en el panel pero no se envían (faltan RESEND_API_KEY y MAIL_FROM)');
 console.log({
   real: '💳 SumUp: conectado (cobros reales)',
   mock: '🧪 SumUp: MODO SIMULACIÓN — no se cobra nada (SUMUP_MOCK=true)',
@@ -101,7 +109,8 @@ app.post('/api/bookings', limiter, async (req, res) => {
     name: clean(b.name, 100), company: clean(b.company, 100), phone: clean(b.phone, 30), email: clean(b.email, 120),
     origin: clean(b.origin), destination: clean(b.destination), date: clean(b.date, 10), time: clean(b.time, 5),
     pax: Math.min(Math.max(parseInt(b.pax) || 1, 1), 50), luggage: Math.min(Math.max(parseInt(b.luggage) || 0, 0), 50),
-    flight: clean(b.flight, 60), sign: clean(b.sign, 100)
+    flight: clean(b.flight, 60), sign: clean(b.sign, 100),
+    lang: b.lang === 'EN' ? 'EN' : 'ES'
   };
   if (!d.name || !d.phone || !d.origin || !d.destination || !d.date || !d.time)
     return res.status(400).json({ error: 'Faltan campos obligatorios.' });
@@ -111,9 +120,10 @@ app.post('/api/bookings', limiter, async (req, res) => {
     return res.status(400).json({ error: 'La fecha debe ser hoy o posterior.' });
 
   // Es una solicitud: el precio lo pone después el admin y el cliente paga desde /pago/<token>
-  const info = db.prepare(`INSERT INTO bookings (name,company,phone,email,origin,destination,date,time,pax,luggage,flight,sign,privacy_accepted_at)
-    VALUES (@name,@company,@phone,@email,@origin,@destination,@date,@time,@pax,@luggage,@flight,@sign,datetime('now'))`).run(d);
+  const info = db.prepare(`INSERT INTO bookings (name,company,phone,email,origin,destination,date,time,pax,luggage,flight,sign,lang,privacy_accepted_at)
+    VALUES (@name,@company,@phone,@email,@origin,@destination,@date,@time,@pax,@luggage,@flight,@sign,@lang,datetime('now'))`).run(d);
   res.status(201).json({ id: info.lastInsertRowid });
+  notifier.bookingReceived(db.prepare('SELECT * FROM bookings WHERE id=?').get(info.lastInsertRowid)).catch(e => console.error(e));
 });
 
 // SumUp avisa de cambios de estado. No nos fiamos del cuerpo: se consulta siempre su API.
@@ -214,12 +224,20 @@ const adminOnly = auth.requireApi('admin');
 // Reservas
 panel.get('/bookings', (req, res) => {
   const rows = db.prepare('SELECT * FROM bookings ORDER BY id DESC LIMIT 500').all();
-  const pays = payments.byBooking();
+  const pays = payments.byBooking(), mails = mailer.byBooking();
   res.json({
     sumupMode: sumup.mode,
-    bookings: rows.map(({ checkout_id, checkout_url, pay_token, ...r }) => ({
-      ...r, payUrl: pay_token ? payments.payUrl(pay_token) : null, payments: pays[r.id] || []
-    }))
+    mailMode: mailer.mode,
+    bookings: rows.map(row => {
+      const { checkout_id, checkout_url, pay_token, ...r } = row;
+      return {
+        ...r,
+        payUrl: pay_token ? payments.payUrl(pay_token) : null,
+        waQuote: pay_token && r.amount_eur > 0 ? notifier.whatsappUrl('quote', row) : null,
+        payments: pays[r.id] || [],
+        emails: mails[r.id] || []
+      };
+    })
   });
 });
 
@@ -239,10 +257,26 @@ panel.patch('/bookings/:id', (req, res) => {
   res.json({ ok: true });
 });
 
-// «Enviar presupuesto»: devuelve el enlace /pago/<token> para mandárselo al cliente
-panel.post('/bookings/:id/quote', (req, res) => {
-  try { res.json({ url: payments.ensureQuote(Number(req.params.id)) }); }
-  catch (e) { res.status(400).json({ error: e.message }); }
+// «Enviar presupuesto»: crea el enlace /pago/<token>, lo manda por email y devuelve el WhatsApp ya redactado
+panel.post('/bookings/:id/quote', async (req, res) => {
+  const id = Number(req.params.id);
+  let url;
+  try { url = payments.ensureQuote(id); }
+  catch (e) { return res.status(400).json({ error: e.message }); }
+  const b = db.prepare('SELECT * FROM bookings WHERE id=?').get(id);
+  const emailed = req.body?.email === false ? false : await notifier.emailClient('quote', b);
+  res.json({ url, emailed, wa: notifier.whatsappUrl('quote', b) });
+});
+
+// Avisar al cliente de un cambio (confirmada, cancelada…): email al momento + WhatsApp redactado
+panel.post('/bookings/:id/notify', async (req, res) => {
+  const b = db.prepare('SELECT * FROM bookings WHERE id=?').get(Number(req.params.id));
+  if (!b) return res.sendStatus(404);
+  const kind = req.body?.kind;
+  if (!notifier.KINDS.includes(kind)) return res.status(400).json({ error: 'Tipo de aviso no válido.' });
+  if (kind === 'quote' && !b.pay_token) return res.status(400).json({ error: 'Envía primero el presupuesto.' });
+  const emailed = req.body?.email ? await notifier.emailClient(kind, b) : false;
+  res.json({ emailed, wa: notifier.whatsappUrl(kind, b) });
 });
 
 panel.post('/bookings/:id/sync', async (req, res) => {

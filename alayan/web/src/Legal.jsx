@@ -95,7 +95,7 @@ function Privacy({ L, v, owner, email, q }) {
 
       <H2>3. Para qué los usamos y con qué base legal</H2>
       <UL items={[
-        <>Gestionar tu solicitud, confirmar precio y disponibilidad, enviarte el enlace de pago y prestar el servicio. Base legal: ejecución de un contrato o de medidas precontractuales a petición tuya (art. 6.1.b RGPD).</>,
+        <>Gestionar tu solicitud, confirmar precio y disponibilidad, enviarte el enlace de pago y los avisos sobre tu reserva (por email y WhatsApp) y prestar el servicio. Base legal: ejecución de un contrato o de medidas precontractuales a petición tuya (art. 6.1.b RGPD).</>,
         <>Emitir facturas y cumplir obligaciones contables y fiscales. Base legal: obligación legal (art. 6.1.c RGPD).</>,
         <>Mantener la seguridad de la web y prevenir el fraude. Base legal: interés legítimo (art. 6.1.f RGPD).</>
       ]} />
@@ -114,11 +114,12 @@ function Privacy({ L, v, owner, email, q }) {
         <>SumUp: procesa los pagos con tarjeta como entidad de pago, con su propia <Ext href="https://www.sumup.com/es-es/privacidad/">política de privacidad</Ext>.</>,
         'Railway Corporation: alojamiento de la web y de la base de datos (encargado del tratamiento).',
         'Cloudflare, Inc.: red de distribución y protección de la web frente a ataques (encargado del tratamiento).',
+        'Resend (Plus Five Five, Inc.): envío de los emails sobre tu reserva (encargado del tratamiento).',
         'WhatsApp Ireland Ltd. (Meta): solo si decides contactarnos por WhatsApp.'
       ]} />
 
       <H2>6. Transferencias internacionales</H2>
-      <P>Railway y Cloudflare son empresas con sede en Estados Unidos, por lo que algunos datos pueden tratarse fuera del Espacio Económico Europeo. Estas transferencias se amparan en el Marco de Privacidad de Datos UE-EE. UU. cuando el proveedor está adherido a él o, en su defecto, en las cláusulas contractuales tipo aprobadas por la Comisión Europea (art. 46 RGPD).</P>
+      <P>Railway, Cloudflare y Resend son empresas con sede en Estados Unidos, por lo que algunos datos pueden tratarse fuera del Espacio Económico Europeo. Estas transferencias se amparan en el Marco de Privacidad de Datos UE-EE. UU. cuando el proveedor está adherido a él o, en su defecto, en las cláusulas contractuales tipo aprobadas por la Comisión Europea (art. 46 RGPD).</P>
 
       <H2>7. Tus derechos</H2>
       <P>Puedes ejercer en cualquier momento tus derechos de acceso, rectificación, supresión, oposición, limitación del tratamiento y portabilidad escribiendo a {email}, indicando qué derecho quieres ejercer. Te responderemos en el plazo máximo de un mes. Si fuera necesario para identificarte, podremos pedirte información adicional.</P>

@@ -129,6 +129,64 @@ module.exports = {
       mustAccept: 'Para enviar la reserva debes aceptar la política de privacidad y las condiciones del servicio.',
       privacyInfo: 'Responsable: {owner}. Finalidad: gestionar tu reserva y su pago. Legitimación: ejecución del contrato. Destinatarios: SumUp (pagos) y nuestros proveedores tecnológicos; no cedemos tus datos salvo obligación legal. Derechos: acceso, rectificación, supresión y demás, como se explica en la política de privacidad.'
     },
+    notify: {
+      signature: 'Alayan Driver · Transfer en Andalucía',
+      received: {
+        subject: 'Hemos recibido tu solicitud de reserva #{id}',
+        body: `Hola, {name}:
+
+Hemos recibido tu solicitud de transfer:
+{summary}
+
+En breve te enviaremos el precio y un enlace de pago seguro. Si necesitas cambiar algo, responde a este email o escríbenos por WhatsApp.
+
+Gracias por confiar en nosotros.`
+      },
+      quote: {
+        subject: 'Tu presupuesto de transfer #{id}: {amount}',
+        body: `Hola, {name}:
+
+Este es el precio de tu transfer:
+{summary}
+
+Precio: {amount} (IVA incluido).
+
+Puedes revisar los detalles y pagar de forma segura aquí:
+{link}
+
+La reserva queda confirmada al completar el pago.`
+      },
+      paid: {
+        subject: 'Pago recibido: tu reserva #{id} está confirmada',
+        body: `Hola, {name}:
+
+Hemos recibido tu pago de {amount}. Tu reserva está confirmada:
+{summary}
+
+Puedes consultarla cuando quieras aquí:
+{link}
+
+¡Nos vemos pronto!`
+      },
+      confirmed: {
+        subject: 'Tu reserva #{id} está confirmada',
+        body: `Hola, {name}:
+
+Tu reserva está confirmada:
+{summary}
+
+Si necesitas cambiar algo, responde a este email o escríbenos por WhatsApp.`
+      },
+      cancelled: {
+        subject: 'Tu reserva #{id} ha sido cancelada',
+        body: `Hola, {name}:
+
+Tu reserva ha sido cancelada:
+{summary}
+
+Si crees que es un error o quieres reservar otra fecha, responde a este email o escríbenos por WhatsApp.`
+      }
+    },
     payment: {
       title: 'Tu reserva',
       subtitle: 'Revisa los datos y paga de forma segura con SumUp.',
@@ -278,6 +336,64 @@ module.exports = {
       acceptJoin: 'and the',
       mustAccept: 'To send your booking you must accept the privacy policy and the terms of service.',
       privacyInfo: 'Controller: {owner}. Purpose: managing your booking and its payment. Legal basis: performance of the contract. Recipients: SumUp (payments) and our technology providers; we do not share your data unless required by law. Rights: access, rectification, erasure and others, as explained in the privacy policy.'
+    },
+    notify: {
+      signature: 'Alayan Driver · Transfers in Andalusia',
+      received: {
+        subject: 'We have received your booking request #{id}',
+        body: `Hello {name},
+
+We have received your transfer request:
+{summary}
+
+We will shortly send you the price and a secure payment link. If you need to change anything, reply to this email or message us on WhatsApp.
+
+Thank you for choosing us.`
+      },
+      quote: {
+        subject: 'Your transfer quote #{id}: {amount}',
+        body: `Hello {name},
+
+Here is the price of your transfer:
+{summary}
+
+Price: {amount} (VAT included).
+
+You can check the details and pay securely here:
+{link}
+
+Your booking is confirmed once the payment is completed.`
+      },
+      paid: {
+        subject: 'Payment received: your booking #{id} is confirmed',
+        body: `Hello {name},
+
+We have received your payment of {amount}. Your booking is confirmed:
+{summary}
+
+You can check it at any time here:
+{link}
+
+See you soon!`
+      },
+      confirmed: {
+        subject: 'Your booking #{id} is confirmed',
+        body: `Hello {name},
+
+Your booking is confirmed:
+{summary}
+
+If you need to change anything, reply to this email or message us on WhatsApp.`
+      },
+      cancelled: {
+        subject: 'Your booking #{id} has been cancelled',
+        body: `Hello {name},
+
+Your booking has been cancelled:
+{summary}
+
+If you think this is a mistake or want to book another date, reply to this email or message us on WhatsApp.`
+      }
     },
     payment: {
       title: 'Your booking',

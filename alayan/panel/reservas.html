@@ -17,6 +17,10 @@ details li{margin:3px 0}
 .mode.mock{background:#1f3a5a40;border-color:#4a7bb066}
 .mode.off{background:#6b222240;border-color:#b94a4a66}
 td.cobro{min-width:250px}
+.mode.mail{background:#3a3a1f40;border-color:#b0a04a66}
+#notifyDlg label.opt{display:flex;gap:8px;align-items:center;color:var(--text);font-size:14px;margin:10px 0}
+#notifyDlg select{margin-top:4px}
+#notifyDlg p{margin:0 0 6px}
 </style></head><body>
 <main>
   <div class="head">
@@ -44,6 +48,20 @@ td.cobro{min-width:250px}
     <tbody id="rows"><tr><td colspan="7">Cargando…</td></tr></tbody>
   </table></div>
 </main>
+<dialog id="notifyDlg"><form method="dialog">
+  <h2 id="nTitle">Avisar al cliente</h2>
+  <p class="muted" id="nWho"></p>
+  <div><label>Aviso</label><select id="nKind">
+    <option value="received">Solicitud recibida</option>
+    <option value="quote">Presupuesto con enlace de pago</option>
+    <option value="paid">Pago recibido</option>
+    <option value="confirmed">Reserva confirmada</option>
+    <option value="cancelled">Reserva cancelada</option>
+  </select></div>
+  <label class="opt"><input type="checkbox" id="nEmail" checked> <span id="nEmailLabel">Email</span></label>
+  <label class="opt"><input type="checkbox" id="nWa" checked> <span id="nWaLabel">WhatsApp</span></label>
+  <div class="actions"><button type="button" class="ghost" id="nCancel">No avisar</button><button type="submit" id="nSend">Avisar</button></div>
+</form></dialog>
 <script src="/panel/panel.js"></script>
 <script>
 const STATUSES = ['pendiente', 'pagada', 'confirmada', 'cancelada'];
@@ -55,17 +73,8 @@ const today = () => new Date().toLocaleDateString('sv'); // AAAA-MM-DD en hora l
 const eur = n => Number(n).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 const utc = s => s ? new Date(s.replace(' ', 'T') + 'Z').toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
-// Para wa.me hace falta el número con prefijo: si es un móvil español de 9 cifras se añade 34
-function waNumber(phone) {
-  const d = String(phone || '').replace(/\D/g, '').replace(/^00/, '');
-  return /^[67]\d{8}$/.test(d) ? '34' + d : d;
-}
-
-function waQuote(r) {
-  const text = `Hola ${r.name.split(' ')[0]}, te confirmamos tu transfer ${r.origin} → ${r.destination} el ${r.date} a las ${r.time}. ` +
-    `Precio: ${eur(r.amount_eur)} (IVA incluido). Puedes revisar los detalles y pagar de forma segura aquí: ${r.payUrl}`;
-  return `https://wa.me/${waNumber(r.phone)}?text=${encodeURIComponent(text)}`;
-}
+const EMAIL_LABELS = { received: 'solicitud recibida', quote: 'presupuesto', paid: 'pago recibido', confirmed: 'confirmada', cancelled: 'cancelada' };
+const EMAIL_STATUS = { sent: '', simulated: ' (prueba, no enviado)', failed: ' ❌ falló' };
 
 function cobro(r) {
   const attempts = r.payments.length
@@ -73,21 +82,27 @@ function cobro(r) {
         `<li>${utc(p.created_at)} · ${eur(p.amount_eur)} · ${ATTEMPT_LABELS[p.status] || p.status}${p.transaction_code ? ' · ref. ' + esc(p.transaction_code) : ''}</li>`).join('')}</ul></details>`
     : '';
   const pending = r.payments.some(p => p.status === 'PENDING');
+  const toClient = r.emails.filter(e => e.kind !== 'admin');
+  const emails = toClient.length
+    ? `<details><summary>✉ ${toClient.length} email${toClient.length > 1 ? 's' : ''} al cliente</summary><ul>${toClient.slice().reverse().map(e =>
+        `<li>${utc(e.created_at)} · ${EMAIL_LABELS[e.kind] || e.kind}${EMAIL_STATUS[e.status] ?? ''}</li>`).join('')}</ul></details>`
+    : '';
+  const notifyBtn = `<div class="row"><button class="ghost small" data-notify="${r.id}">Avisar al cliente…</button></div>`;
 
   if (r.payment_status === 'pagado') {
     const paid = r.payments.find(p => p.status === 'PAID');
     return `<span class="tag pagado">pagado</span>
-      <div class="paid"><b>${eur(paid?.amount_eur ?? r.amount_eur)}</b><br><small>${utc(r.paid_at)}${paid?.transaction_code ? ' · ref. ' + esc(paid.transaction_code) : ''}</small></div>${attempts}`;
+      <div class="paid"><b>${eur(paid?.amount_eur ?? r.amount_eur)}</b><br><small>${utc(r.paid_at)}${paid?.transaction_code ? ' · ref. ' + esc(paid.transaction_code) : ''}</small></div>${notifyBtn}${attempts}${emails}`;
   }
   const canQuote = r.status !== 'cancelada' && r.date >= today();
   return `<span class="tag ${r.payment_status}">${PAY_LABELS[r.payment_status] || r.payment_status}</span>
-    <div class="price"><input id="a${r.id}" type="number" step="0.01" min="0" placeholder="Precio €" value="${r.amount_eur ?? ''}" ${canQuote ? '' : 'disabled'}>
+    <div class="price"><input id="a${r.id}" type="text" inputmode="decimal" autocomplete="off" placeholder="Precio €" value="${r.amount_eur != null ? r.amount_eur.toFixed(2).replace('.', ',') : ''}" ${canQuote ? '' : 'disabled'}>
       ${canQuote ? `<button class="small" data-quote="${r.id}">${r.payUrl ? 'Actualizar' : 'Enviar presupuesto'}</button>` : ''}</div>
     ${r.payUrl && canQuote ? `<div class="row">
-      <a class="btn small" href="${esc(waQuote(r))}" target="_blank">Enviar por WhatsApp</a>
+      <a class="btn small" href="${esc(r.waQuote)}" target="_blank">Enviar por WhatsApp</a>
       <button class="ghost small" data-copy="${esc(r.payUrl)}">Copiar enlace</button></div>` : ''}
     ${pending ? `<div class="row"><button class="ghost small" data-sync="${r.id}">Comprobar pago</button></div>` : ''}
-    ${attempts}`;
+    ${notifyBtn}${attempts}${emails}`;
 }
 
 function render() {
@@ -120,18 +135,18 @@ function render() {
     <td class="cobro">${cobro(r)}</td></tr>`).join('') || `<tr><td colspan="7">${all.length ? 'Ninguna reserva coincide con el filtro.' : 'Sin reservas todavía.'}</td></tr>`;
 }
 
-function renderMode(mode) {
-  $('mode').innerHTML = {
+function renderMode(mode, mailMode) {
+  $('mode').innerHTML = (mailMode === 'test' ? '<div class="mode mail">✉️ <b>Emails en modo prueba:</b> se registran en cada reserva pero no se envían. Para enviarlos, configura RESEND_API_KEY y MAIL_FROM.</div>' : '') + ({
     mock: '<div class="mode mock">🧪 <b>Modo simulación de SumUp:</b> los pagos son de prueba y no se cobra nada. Para cobrar de verdad, configura SUMUP_API_KEY y SUMUP_MERCHANT_CODE.</div>',
     off: '<div class="mode off">⚠️ <b>SumUp sin configurar:</b> puedes enviar presupuestos, pero los clientes no podrán pagar online hasta configurar SUMUP_API_KEY y SUMUP_MERCHANT_CODE.</div>'
-  }[mode] || '';
+  }[mode] || '');
 }
 
 async function load() {
   try {
     const d = await api('/api/panel/bookings');
     all = d.bookings;
-    renderMode(d.sumupMode);
+    renderMode(d.sumupMode, d.mailMode);
     render();
   } catch (e) { toast(e.message, 'error'); }
 }
@@ -141,10 +156,42 @@ async function update(id, body) {
   catch (e) { toast(e.message, 'error'); }
 }
 
-$('rows').addEventListener('change', e => {
+$('rows').addEventListener('change', async e => {
   const { id, field } = e.target.dataset;
-  if (id && field) update(id, { [field]: e.target.value });
+  if (!id || !field) return;
+  await update(id, { [field]: e.target.value });
+  // Al confirmar o cancelar se ofrece avisar al cliente
+  const kind = field === 'status' && { confirmada: 'confirmed', cancelada: 'cancelled' }[e.target.value];
+  if (kind) openNotify(all.find(r => String(r.id) === id), kind, `Reserva #${id} marcada como ${e.target.value}`);
 });
+
+// Diálogo «Avisar al cliente»: email al momento y WhatsApp con el mensaje ya escrito (en su idioma)
+let notifyFor = null;
+function openNotify(r, kind, title) {
+  notifyFor = r;
+  $('nTitle').textContent = title || `Avisar a ${r.name}`;
+  $('nWho').textContent = `¿Avisamos a ${r.name}? El mensaje sale en ${r.lang === 'EN' ? 'inglés' : 'español'}.`;
+  $('nKind').querySelector('[value=quote]').disabled = !r.payUrl;
+  $('nKind').value = kind;
+  $('nEmailLabel').textContent = `Email a ${r.email}`;
+  $('nWaLabel').textContent = `WhatsApp a ${r.phone} (se abre con el mensaje escrito)`;
+  $('nSend').disabled = false;
+  $('notifyDlg').showModal();
+}
+$('nCancel').onclick = () => $('notifyDlg').close();
+$('notifyDlg').querySelector('form').onsubmit = async e => {
+  e.preventDefault();
+  const email = $('nEmail').checked, wa = $('nWa').checked;
+  if (!email && !wa) return toast('Elige email, WhatsApp o los dos.', 'error');
+  $('nSend').disabled = true;
+  try {
+    const d = await api(`/api/panel/bookings/${notifyFor.id}/notify`, { method: 'POST', body: { kind: $('nKind').value, email } });
+    if (wa) window.open(d.wa, '_blank');
+    if (email) toast(d.emailed ? 'Email enviado' : 'No se pudo enviar el email', d.emailed ? 'ok' : 'error');
+    $('notifyDlg').close();
+    await load();
+  } catch (err) { toast(err.message, 'error'); $('nSend').disabled = false; }
+};
 
 $('rows').addEventListener('click', async e => {
   const t = e.target, d = t.dataset;
@@ -154,14 +201,22 @@ $('rows').addEventListener('click', async e => {
     t.disabled = true;
     try {
       await api('/api/panel/bookings/' + d.quote, { method: 'PATCH', body: { amount } });
-      const { url } = await api(`/api/panel/bookings/${d.quote}/quote`, { method: 'POST' });
-      await navigator.clipboard?.writeText(url).catch(() => {});
-      toast('Presupuesto listo y enlace copiado. Pulsa «Enviar por WhatsApp» para mandárselo.');
+      const q = await api(`/api/panel/bookings/${d.quote}/quote`, { method: 'POST', body: {} });
+      await navigator.clipboard?.writeText(q.url).catch(() => {});
+      toast(q.emailed
+        ? 'Presupuesto enviado por email y enlace copiado. Si quieres, mándalo también por WhatsApp.'
+        : 'Enlace copiado, pero el email no se pudo enviar: mándalo por WhatsApp.', q.emailed ? 'ok' : 'error');
       await load();
     } catch (err) { toast(err.message, 'error'); t.disabled = false; }
   }
   if (d.copy) {
     await navigator.clipboard?.writeText(d.copy).then(() => toast('Enlace copiado'), () => toast('No se pudo copiar', 'error'));
+  }
+  if (d.notify) {
+    const r = all.find(x => String(x.id) === d.notify);
+    const kind = r.payment_status === 'pagado' ? 'paid' : r.status === 'cancelada' ? 'cancelled'
+      : r.status === 'confirmada' ? 'confirmed' : r.payUrl ? 'quote' : 'received';
+    openNotify(r, kind);
   }
   if (d.sync) {
     t.disabled = true;
