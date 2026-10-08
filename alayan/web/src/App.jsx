@@ -34,13 +34,6 @@ export default function App({ content }) {
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#F7F3ED] antialiased selection:bg-[#C5A46A]/30">
-      {/* Selector de idioma */}
-      <div className="fixed top-0 right-0 z-[60] flex items-center gap-2 px-4 py-3 md:px-6 bg-black/60 backdrop-blur-xl border-b border-l border-white/10 rounded-bl-[18px]">
-        {langButton('ES')}
-        <span className="text-white/20">|</span>
-        {langButton('EN')}
-      </div>
-
       {/* Cabecera */}
       <header className="sticky top-0 z-50 bg-[#0A0A0A]/90 backdrop-blur-2xl border-b border-white/[0.06]">
         <div className="mx-auto max-w-[1440px] px-6 md:px-10 h-[72px] flex items-center justify-between">
@@ -52,7 +45,7 @@ export default function App({ content }) {
               <div className="text-[10px] tracking-[0.28em] text-[#C5A46A] mt-0.5">{t.brand.tagline}</div>
             </div>
           </div>
-          <nav className="hidden lg:flex items-center gap-8 text-[11px] tracking-[0.18em] text-white/60">
+          <nav className="hidden xl:flex items-center gap-8 text-[11px] tracking-[0.18em] text-white/60">
             <a href="#flota" className="hover:text-white transition">{t.nav.fleet}</a>
             <a href="#clases" className="hover:text-white transition">{t.nav.classes}</a>
             <a href="#conductores" className="hover:text-white transition">{t.nav.drivers}</a>
@@ -60,6 +53,11 @@ export default function App({ content }) {
             <a href="#servicios" className="hover:text-white transition">{t.nav.services}</a>
           </nav>
           <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
+              {langButton('ES')}
+              <span className="text-white/20">|</span>
+              {langButton('EN')}
+            </div>
             <a href="#reserva" className="hidden md:inline-flex h-10 px-6 items-center justify-center rounded-full bg-white text-black text-[11px] tracking-[0.2em] font-semibold hover:bg-[#F7F3ED] transition">
               {t.nav.book.toUpperCase()}
             </a>
@@ -116,10 +114,7 @@ export default function App({ content }) {
                   </div>
                 ))}
               </div>
-              <div className="mt-10 pt-8 border-t border-black/10 flex items-center justify-between">
-                <span className="text-[12px] tracking-[0.2em]">{t.exp.values}</span>
-                <span className="h-6 w-6 rounded-full grid place-items-center bg-[#C5A46A] text-black text-[12px]">A</span>
-              </div>
+              <div className="mt-10 pt-8 border-t border-black/10 text-[12px] tracking-[0.2em]">{t.exp.values}</div>
             </div>
             <div className="absolute -right-6 -bottom-6 hidden md:block h-24 w-24 rounded-[20px] bg-[#C5A46A] -z-10" />
           </div>

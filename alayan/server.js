@@ -295,7 +295,8 @@ app.use('/panel', express.static(path.join(PANEL_DIR, 'assets'), { maxAge: '1h' 
 // El HTML se sirve con el contenido ya incrustado: sin parpadeo y bueno para SEO
 let indexTemplate = null;
 function renderIndex() {
-  indexTemplate ??= fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf8');
+  // En producción se lee una vez; en local se relee para que un `npm run build` se vea sin reiniciar
+  if (!indexTemplate || process.env.NODE_ENV !== 'production') indexTemplate = fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf8');
   const c = content.get();
   const json = JSON.stringify(c).replace(/</g, String.fromCharCode(92) + 'u003c'); // "<" escapado: un texto no puede cerrar el <script>
   return indexTemplate
