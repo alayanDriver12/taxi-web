@@ -1,4 +1,3 @@
-require('node:fs').mkdirSync('./data', { recursive: true });
 const path = require('node:path');
 const crypto = require('node:crypto');
 const express = require('express');
@@ -17,6 +16,7 @@ const {
 if (!ADMIN_PASS) console.warn('⚠️  Define ADMIN_PASS en las variables de entorno para proteger /admin');
 
 // ---------- Base de datos ----------
+require('node:fs').mkdirSync(path.dirname(DB_PATH), { recursive: true });
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
 db.exec(`

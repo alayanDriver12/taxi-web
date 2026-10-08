@@ -1,0 +1,19 @@
+# Dependencias
+node_modules/
+
+# Secretos y configuración local
+.env
+.env.*
+!.env.example
+
+# Base de datos SQLite (local y backups)
+data/
+*.db
+*.db-shm
+*.db-wal
+
+# Sistema / editor
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
