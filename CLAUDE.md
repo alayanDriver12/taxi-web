@@ -41,15 +41,21 @@ desarrollador: **español**. Todo el código vive en `alayan/`; el detalle técn
 `main` = producción (Railway despliega solo). `develop` = pruebas (entorno staging con su propia BBDD).
 Trabajar en `develop`, probar, y pasar a `main` con PR.
 
-Railway: proyecto `meticulous-vitality`, servicio `taxi-web` (root `/alayan`, volumen en `/data`).
-- production: rama `main` · https://taxi-web-production-a693.up.railway.app
-- staging: rama `develop` · https://taxi-web-staging.up.railway.app · `SUMUP_MOCK=true` · región Ámsterdam
-CLI: `railway link --project meticulous-vitality --environment staging`. En PowerShell 5.1 pasar JSON a la CLI
-con `cmd /c "..."` (si no, se pierden las comillas). Borrar servicios: en la web.
-**Cambiar de región** (la web no deja con volumen en plan Trial): mutación `environmentPatchCommit` con
-`volumes.<volumeId>.region` y `services.<serviceId>.deploy.multiRegionConfig = {"ams":{"numReplicas":1},"sfo":null}`.
-Railway migra el volumen (unos minutos sin servicio) y conserva los datos: probado en staging el 8 oct 2026.
-Antes de hacerlo en producción: copia nativa con `volumeInstanceBackupCreate` y exportar el CSV.
+Todo es del cliente (desde el 8 oct 2026): GitHub `alayanDriver12/taxi-web` (colaborador: `anubiss10`) y Railway
+con la cuenta `alayan.driver@gmail.com`, proyecto `alayan-driver`, servicio `taxi-web` (root `/alayan`, volumen en
+`/data`), **todo en Ámsterdam** (`ams`):
+- production: rama `main` · https://taxi-web-production-245f.up.railway.app
+- staging: rama `develop` · https://taxi-web-staging-2d93.up.railway.app · `SUMUP_MOCK=true`
+El proyecto antiguo (`meticulous-vitality`, en la cuenta del desarrollador) queda obsoleto: borrarlo cuando el nuevo
+esté validado.
+
+CLI: `railway link --project alayan-driver --environment staging --service taxi-web` (sesión con la cuenta del
+cliente). En PowerShell 5.1 la CLI pierde las comillas del JSON: escribir consultas y variables en archivos y usar
+`railway api --file x.graphql --variables @x.json`. Borrar servicios o volúmenes: en la web.
+**Cambiar de región** con volumen (la web no lo deja en Trial): mutación `environmentPatchCommit` cambiando a la vez
+`volumes.<volumeId>.region` y `services.<serviceId>.deploy.multiRegionConfig = {"ams":{"numReplicas":1},"<antigua>":null}`.
+Hacerlo sin ningún despliegue en curso: si no, Railway lo revierte («Reset region due to volume migration failure»).
+Conserva los datos (probado). Antes, en producción con datos: copia nativa con `volumeInstanceBackupCreate`.
 
 ## Variables de entorno (en Railway, nunca en el repo)
 `BASE_URL` (https, sin barra final), `ADMIN_USER`/`ADMIN_PASS` (solo crean el primer admin; mín. 8 caracteres),
@@ -67,12 +73,10 @@ panel en `/login`. Para el diseño con recarga instantánea: `npm run dev:web` (
 - Nunca subir `.env`, claves ni ficheros `.db` (ya en `.gitignore`).
 
 ## Pendiente (octubre 2026)
-**Hecho (8 oct 2026):** entorno staging creado, probado y en Ámsterdam · producción con `ADMIN_PASS` de 16 caracteres y `BASE_URL`.
-**Configuración:** cuenta en plan **Trial → pasar a Hobby** (si no, la web se para al acabar la prueba) · región
-Europa (Ámsterdam) en producción, con copia previa (ver «Cambiar de región») ·
-borrar el servicio vacío `taxi-web Copy` · dominio IONOS → Cloudflare → Railway (SSL *Full (strict)*) y
-`BEHIND_CLOUDFLARE=true` · Resend con dominio verificado · bucket R2 + token · pasar `develop` → `main` (comprobar
-que la reserva existente sobrevive; no había SumUp configurado en producción, así que no hay enlaces antiguos).
+**Hecho (8 oct 2026):** repo y Railway pasados al cliente · production y staging en Ámsterdam, probados (29/29).
+**Configuración:** cuenta del cliente en **Trial → pasar a Hobby** (si no, la web se para al acabar la prueba) ·
+borrar el proyecto antiguo `meticulous-vitality` · dominio IONOS → Cloudflare → Railway (SSL *Full (strict)*) y
+`BEHIND_CLOUDFLARE=true` · Resend con dominio verificado · bucket R2 + token · pasar `develop` → `main`.
 **Cliente:** datos legales en `/admin` (bloquea producción) · su número de WhatsApp real · API key y merchant code de
 SumUp · hojas de reclamaciones de la Junta · Seguro Obligatorio de Viajeros · revisar `/condiciones` con un asesor.
 **Al final:** pago real de pocos euros y comprobar que los emails llegan (y no van a spam).
