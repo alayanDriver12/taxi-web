@@ -10,6 +10,7 @@ const { createSumUp } = require('./lib/sumup');
 const { createPayments } = require('./lib/payments');
 const { createMailer } = require('./lib/mailer');
 const { createNotifier } = require('./lib/notify');
+const { createBackups } = require('./lib/backup');
 
 const {
   PORT = 3000, BASE_URL = `http://localhost:${PORT}`,
@@ -18,6 +19,8 @@ const {
   SUMUP_MOCK = 'false', // true = simular SumUp sin cuenta (desarrollo / staging). Se ignora si hay API key.
   RESEND_API_KEY = '', MAIL_FROM = '', // emails; sin clave se registran pero no se envían
   NOTIFY_EMAIL = '',                   // dónde recibe Alayan los avisos (por defecto, el email de «Datos legales»)
+  R2_ACCOUNT_ID = '', R2_ACCESS_KEY_ID = '', R2_SECRET_ACCESS_KEY = '', R2_BUCKET = '', // copias en Cloudflare R2
+  BEHIND_CLOUDFLARE = 'false', // true SOLO cuando el dominio pase por Cloudflare: usa la IP real del visitante
   DB_PATH = './data/alayan.db'
 } = process.env;
 
@@ -70,6 +73,11 @@ const payments = createPayments(db, sumup, { baseUrl: BASE_URL, onPaid: b => not
 const mailer = createMailer(db, { apiKey: RESEND_API_KEY, from: MAIL_FROM, siteUrl: BASE_URL, brand: 'ALAYAN DRIVER' });
 const notifier = createNotifier({ content, mailer, payments, baseUrl: BASE_URL, notifyEmail: NOTIFY_EMAIL });
 console.log(mailer.mode === 'real' ? '✉️  Email: Resend conectado' : '✉️  Email: MODO PRUEBA — se registran en el panel pero no se envían (faltan RESEND_API_KEY y MAIL_FROM)');
+const backups = createBackups(db, {
+  dataDir: path.dirname(DB_PATH), uploadsDir: UPLOADS_DIR,
+  r2: { accountId: R2_ACCOUNT_ID, accessKeyId: R2_ACCESS_KEY_ID, secretAccessKey: R2_SECRET_ACCESS_KEY, bucket: R2_BUCKET }
+});
+console.log(backups.mode === 'r2' ? '💾 Copias: Cloudflare R2, cada noche' : '💾 Copias: LOCALES en el volumen (configura R2_* para guardarlas fuera de Railway)');
 console.log({
   real: '💳 SumUp: conectado (cobros reales)',
   mock: '🧪 SumUp: MODO SIMULACIÓN — no se cobra nada (SUMUP_MOCK=true)',
@@ -101,7 +109,13 @@ const clean = (v, max = 200) => String(v ?? '').trim().slice(0, max);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 // ---------- API pública ----------
-const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
+// IP del visitante para los límites de peticiones. Detrás de Cloudflare, req.ip sería la de Cloudflare (todos
+// compartirían límite), así que se usa la cabecera que pone Cloudflare. Solo es fiable si TODO el tráfico pasa
+// por Cloudflare: por eso se activa a mano con BEHIND_CLOUDFLARE=true.
+const clientIp = BEHIND_CLOUDFLARE === 'true' ? req => req.headers['cf-connecting-ip'] || req.ip : req => req.ip;
+const limit = opts => rateLimit({ windowMs: 15 * 60 * 1000, standardHeaders: true, legacyHeaders: false, keyGenerator: clientIp, ...opts });
+
+const limiter = limit({ max: 20 });
 
 app.post('/api/bookings', limiter, async (req, res) => {
   const b = req.body || {};
@@ -137,7 +151,7 @@ app.post('/api/sumup/webhook', async (req, res) => {
 
 // Página de pago del cliente. El token (32 caracteres aleatorios) es la única «llave».
 const TOKEN_RE = /^[A-Za-z0-9_-]{32}$/;
-const payLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
+const payLimiter = limit({ max: 60 });
 
 function bookingByToken(req, res) {
   const b = TOKEN_RE.test(req.params.token) && payments.findByToken(req.params.token);
@@ -195,8 +209,7 @@ h1{font-size:20px}b{font-size:28px;display:block;margin:8px 0 20px}button{width:
 app.get('/api/content', (req, res) => res.set('Cache-Control', 'no-cache').json(content.get()));
 
 // ---------- Sesión ----------
-const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, skipSuccessfulRequests: true, standardHeaders: true, legacyHeaders: false,
-  message: { error: 'Demasiados intentos. Espera unos minutos.' } });
+const loginLimiter = limit({ max: 10, skipSuccessfulRequests: true, message: { error: 'Demasiados intentos. Espera unos minutos.' } });
 
 app.use(['/api/auth', '/api/panel', '/login', '/reservas', '/admin'], auth.loadUser);
 
@@ -363,6 +376,13 @@ panel.patch('/users/:id', adminOnly, (req, res) => {
 panel.delete('/users/:id', adminOnly, (req, res) => {
   try { auth.deleteUser(Number(req.params.id), req.user); res.json({ ok: true }); }
   catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// Copias de seguridad
+panel.get('/backup', adminOnly, (req, res) => res.json({ mode: backups.mode, last: backups.status() }));
+panel.post('/backup', adminOnly, async (req, res) => {
+  const result = await backups.run(`manual (${req.user.username})`);
+  res.status(result.ok ? 200 : 502).json({ mode: backups.mode, last: result, error: result.ok ? undefined : result.error });
 });
 
 app.use('/api/panel', panel);

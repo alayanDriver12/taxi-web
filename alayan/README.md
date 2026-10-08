@@ -89,4 +89,20 @@ DNS que indica (SPF/DKIM); después, en Railway: `RESEND_API_KEY`, `MAIL_FROM="A
 opcional, `NOTIFY_EMAIL` (si no, los avisos internos van al email de «Datos legales»). Sin clave, modo prueba.
 
 ## Copias de seguridad
-Descarga el CSV desde el panel o copia `/data/alayan.db` y `/data/uploads/`.
+Cada noche, a partir de las 3:00 (hora de Madrid), se hace una copia consistente de la base de datos (comprimida)
+y se suben las imágenes nuevas. Estado y botón «Hacer copia ahora» en `/admin` → «Copias de seguridad».
+
+- **Con Cloudflare R2** (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`): en el bucket quedan
+  `db/alayan-AAAA-MM-DD_HHMM.db.gz` y `uploads/…`. Crear en Cloudflare un bucket privado y un token de API de R2
+  con permiso *Object Read & Write* solo para ese bucket. Añadir una regla de ciclo de vida que borre `db/` a los
+  30 días (no hay que tocar `uploads/`).
+- **Sin R2**: se guardan las 7 últimas en `/data/backups/`. Protegen de errores, no de perder el volumen.
+
+**Restaurar:** descargar el `.db.gz`, descomprimirlo (`gunzip`), parar el servicio, sustituir `/data/alayan.db`
+(y borrar `alayan.db-wal` / `alayan.db-shm` si existen) y volver a arrancar. Las imágenes van en `/data/uploads/`.
+El CSV del panel sigue disponible para consultas rápidas.
+
+## Cloudflare
+Cuando el dominio pase por Cloudflare, poner `BEHIND_CLOUDFLARE=true` en Railway: los límites de peticiones usan
+entonces la IP real del visitante (cabecera `CF-Connecting-IP`). No activarlo antes: sin Cloudflare delante, esa
+cabecera la puede inventar cualquiera.

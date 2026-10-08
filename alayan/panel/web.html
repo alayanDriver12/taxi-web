@@ -63,7 +63,7 @@ body.has-savebar main{padding-bottom:90px}
 const $ = id => document.getElementById(id);
 
 const SECTION_NAMES = {
-  legal: 'Datos legales', general: 'General y SEO', images: 'Imágenes',
+  legal: 'Datos legales', general: 'General y SEO', images: 'Imágenes', backup: 'Copias de seguridad',
   brand: 'Marca', nav: 'Menú', hero: 'Portada', exp: 'Experiencia', slogans: 'Lemas', fleet: 'Flota',
   classes: 'Clases y precios', drivers: 'Conductores', destinations: 'Destinos', services: 'Servicios',
   booking: 'Reserva', payment: 'Página de pago', notify: 'Avisos al cliente', footer: 'Pie de página'
@@ -291,6 +291,29 @@ function renderLegal() {
   ];
 }
 
+// No es contenido de la web, pero vive aquí porque solo lo ve el administrador
+function renderBackup() {
+  const box = h('div', {}, 'Cargando…');
+  const show = d => {
+    const l = d.last;
+    box.replaceChildren(
+      h('p', { class: 'muted' }, d.mode === 'r2'
+        ? 'Cada noche (a partir de las 3:00) se guarda una copia de la base de datos y de las imágenes nuevas en Cloudflare R2, fuera de Railway.'
+        : 'R2 no está configurado: las copias se guardan en el propio servidor (las 7 últimas). Protegen de errores, no de perder el servidor. Configura R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY y R2_BUCKET.'),
+      h('div', { class: l?.ok === false ? 'warn' : 'card', style: 'margin:14px 0' },
+        !l ? 'Todavía no se ha hecho ninguna copia.'
+          : l.ok ? `✅ Última copia: ${new Date(l.at).toLocaleString('es-ES')} · ${l.file} · ${l.sizeKb} KB${l.images ? ` · ${l.images} imágenes` : ''} (${l.reason})`
+          : `⚠️ La última copia falló (${new Date(l.at).toLocaleString('es-ES')}): ${l.error}`),
+      h('button', { type: 'button', onclick: async e => {
+        e.target.disabled = true; e.target.textContent = 'Haciendo copia…';
+        try { show(await api('/api/panel/backup', { method: 'POST' })); toast('Copia de seguridad hecha'); }
+        catch (err) { toast(err.message, 'error'); renderSection(); }
+      } }, 'Hacer copia ahora'));
+  };
+  api('/api/panel/backup').then(show, e => box.replaceChildren(e.message));
+  return box;
+}
+
 function renderImages() {
   return [
     h('p', { class: 'muted' }, 'Las imágenes se publican en cuanto las subes. JPG, PNG o WebP, máximo 8 MB. Para fotos, mejor JPG de unos 1600 px de ancho.'),
@@ -312,7 +335,7 @@ function renderSection() {
   $('side').replaceChildren(...Object.entries(SECTION_NAMES).map(([key, name]) =>
     h('button', { type: 'button', class: key === current ? 'on' : '', onclick: () => { current = key; renderSection(); scrollTo(0, 0); } }, name)));
 
-  const own = { legal: renderLegal, general: renderGeneral, images: renderImages }[current];
+  const own = { legal: renderLegal, general: renderGeneral, images: renderImages, backup: renderBackup }[current];
   const missing = missingLegal();
   $('panel').replaceChildren(...[
     missing.length && h('div', { class: 'warn' },
