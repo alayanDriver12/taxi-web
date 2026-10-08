@@ -1,9 +1,11 @@
+const fs = require('node:fs');
 const path = require('node:path');
-const crypto = require('node:crypto');
 const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const Database = require('better-sqlite3');
+const { createAuth, homeFor } = require('./lib/auth');
+const { createContentStore, IMAGE_SLOTS } = require('./lib/content');
 
 const {
   PORT = 3000, BASE_URL = `http://localhost:${PORT}`,
@@ -13,12 +15,15 @@ const {
   ALLOW_CLIENT_AMOUNT = 'false'
 } = process.env;
 
-if (!ADMIN_PASS) console.warn('⚠️  Define ADMIN_PASS en las variables de entorno para proteger /admin');
+const DIST_DIR = path.join(__dirname, 'dist');     // web compilada (npm run build)
+const PANEL_DIR = path.join(__dirname, 'panel');   // páginas del panel interno
+const UPLOADS_DIR = path.join(path.dirname(DB_PATH), 'uploads'); // imágenes subidas, en el volumen
 
 // ---------- Base de datos ----------
-require('node:fs').mkdirSync(path.dirname(DB_PATH), { recursive: true });
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 const db = new Database(DB_PATH);
 db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 db.exec(`
 CREATE TABLE IF NOT EXISTS bookings (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -36,10 +41,28 @@ CREATE TABLE IF NOT EXISTS bookings (
 CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings(date);
 `);
 
+const auth = createAuth(db, { secure: BASE_URL.startsWith('https://') });
+const content = createContentStore(db);
+
+// Primer arranque: el primer administrador sale de ADMIN_USER / ADMIN_PASS
+if (!auth.countUsers()) {
+  if (ADMIN_PASS) {
+    try {
+      auth.createUser({ username: ADMIN_USER, name: 'Administrador', role: 'admin', password: ADMIN_PASS });
+      console.log(`👤 Creado el usuario administrador "${ADMIN_USER}" a partir de ADMIN_USER / ADMIN_PASS`);
+    } catch (e) {
+      console.error(`⚠️  No se pudo crear el administrador inicial: ${e.message}`);
+    }
+  } else {
+    console.warn('⚠️  No hay usuarios. Define ADMIN_USER y ADMIN_PASS (mín. 8 caracteres) para crear el primer administrador.');
+  }
+}
+
 // ---------- App ----------
 const app = express();
 app.set('trust proxy', 1);
 app.use(helmet({ contentSecurityPolicy: false }));
+app.use('/api/panel', express.json({ limit: '300kb' })); // el contenido de la web pesa más que una reserva
 app.use(express.json({ limit: '50kb' }));
 
 const clean = (v, max = 200) => String(v ?? '').trim().slice(0, max);
@@ -124,21 +147,41 @@ app.get('/api/bookings/:id/status', async (req, res) => {
   res.json(r);
 });
 
-// ---------- Admin ----------
-function auth(req, res, next) {
-  const h = req.headers.authorization || '';
-  const [u, p] = Buffer.from(h.split(' ')[1] || '', 'base64').toString().split(':');
-  const ok = ADMIN_PASS && u === ADMIN_USER && p && p.length === ADMIN_PASS.length &&
-    crypto.timingSafeEqual(Buffer.from(p), Buffer.from(ADMIN_PASS));
-  if (ok) return next();
-  res.set('WWW-Authenticate', 'Basic realm="Alayan Admin"').status(401).send('Acceso restringido');
-}
+app.get('/api/content', (req, res) => res.set('Cache-Control', 'no-cache').json(content.get()));
 
-app.get('/api/admin/bookings', auth, (req, res) => {
+// ---------- Sesión ----------
+const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, skipSuccessfulRequests: true, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Espera unos minutos.' } });
+
+app.use(['/api/auth', '/api/panel', '/login', '/reservas', '/admin'], auth.loadUser);
+
+app.post('/api/auth/login', loginLimiter, (req, res) => {
+  const user = auth.login(req.body?.username, req.body?.password);
+  if (!user) return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
+  auth.startSession(res, user);
+  res.json({ ok: true, home: homeFor(user) });
+});
+
+app.post('/api/auth/logout', (req, res) => { auth.endSession(req, res); res.json({ ok: true }); });
+
+app.get('/api/auth/me', auth.requireApi(), (req, res) => res.json(req.user));
+
+app.post('/api/auth/password', auth.requireApi(), (req, res) => {
+  try { auth.changeOwnPassword(req, req.body?.current, req.body?.next); res.json({ ok: true }); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+// ---------- API del panel ----------
+const panel = express.Router();
+panel.use(auth.requireApi()); // cualquier usuario con sesión: admin o gestor
+const adminOnly = auth.requireApi('admin');
+
+// Reservas
+panel.get('/bookings', (req, res) => {
   res.json(db.prepare('SELECT * FROM bookings ORDER BY id DESC LIMIT 500').all());
 });
 
-app.patch('/api/admin/bookings/:id', auth, async (req, res) => {
+panel.patch('/bookings/:id', async (req, res) => {
   const id = Number(req.params.id);
   const cur = db.prepare('SELECT * FROM bookings WHERE id=?').get(id);
   if (!cur) return res.sendStatus(404);
@@ -156,21 +199,121 @@ app.patch('/api/admin/bookings/:id', auth, async (req, res) => {
   res.json({ ok: true, checkoutUrl: link });
 });
 
-app.delete('/api/admin/bookings/:id', auth, (req, res) => {
+panel.delete('/bookings/:id', adminOnly, (req, res) => {
   db.prepare('DELETE FROM bookings WHERE id=?').run(Number(req.params.id));
   res.json({ ok: true });
 });
 
-app.get('/api/admin/export.csv', auth, (req, res) => {
+panel.get('/bookings.csv', (req, res) => {
   const rows = db.prepare('SELECT * FROM bookings ORDER BY id DESC').all();
   const cols = rows[0] ? Object.keys(rows[0]) : ['id'];
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  res.type('text/csv').attachment('reservas.csv').send('\ufeff' + [cols.join(','), ...rows.map(r => cols.map(c => q(r[c])).join(','))].join('\n'));
+  res.type('text/csv').attachment('reservas.csv').send(String.fromCharCode(0xfeff) + [cols.join(','), ...rows.map(r => cols.map(c => q(r[c])).join(','))].join('\n'));
 });
 
-app.get('/admin', auth, (req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+// Contenido de la web
+const contentResponse = () => ({ content: content.get(), defaults: content.defaults, meta: content.meta() });
 
-app.use(express.static(path.join(__dirname, 'public'), { maxAge: '7d', index: 'index.html' }));
+panel.get('/content', adminOnly, (req, res) => res.json(contentResponse()));
+
+panel.put('/content', adminOnly, (req, res) => {
+  try { content.saveTexts(req.body || {}, req.user.username); res.json(contentResponse()); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+panel.post('/content/reset', adminOnly, (req, res) => {
+  content.resetTexts(req.user.username);
+  res.json(contentResponse());
+});
+
+// Imágenes: se suben en crudo (Content-Type: image/...) y se guardan en el volumen
+const IMAGE_TYPES = [
+  { ext: 'jpg', test: b => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  { ext: 'png', test: b => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
+  { ext: 'webp', test: b => b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP' }
+];
+
+function removeUpload(url) {
+  if (!url?.startsWith('/uploads/')) return;
+  fs.rm(path.join(UPLOADS_DIR, path.basename(url)), { force: true }, () => {});
+}
+
+panel.post('/images/:slot', adminOnly, express.raw({ type: 'image/*', limit: '8mb' }), (req, res) => {
+  const { slot } = req.params;
+  if (!IMAGE_SLOTS.includes(slot)) return res.status(404).json({ error: 'Imagen desconocida.' });
+  const buf = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+  const type = IMAGE_TYPES.find(t => t.test(buf));
+  if (!type) return res.status(400).json({ error: 'Formato no válido. Usa JPG, PNG o WebP.' });
+  const file = `${slot}-${Date.now()}.${type.ext}`;
+  fs.writeFileSync(path.join(UPLOADS_DIR, file), buf);
+  const previous = content.get().images[slot];
+  content.setImage(slot, `/uploads/${file}`, req.user.username);
+  removeUpload(previous);
+  res.json(contentResponse());
+});
+
+panel.delete('/images/:slot', adminOnly, (req, res) => {
+  const { slot } = req.params;
+  if (!IMAGE_SLOTS.includes(slot)) return res.status(404).json({ error: 'Imagen desconocida.' });
+  const previous = content.get().images[slot];
+  content.setImage(slot, null, req.user.username);
+  removeUpload(previous);
+  res.json(contentResponse());
+});
+
+// Usuarios
+panel.get('/users', adminOnly, (req, res) => res.json(auth.listUsers()));
+
+panel.post('/users', adminOnly, (req, res) => {
+  try { const id = auth.createUser(req.body || {}); res.status(201).json({ ok: true, id }); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+panel.patch('/users/:id', adminOnly, (req, res) => {
+  const { name, role, active, password } = req.body || {};
+  try { auth.updateUser(Number(req.params.id), { name, role, active, password }, req.user); res.json({ ok: true }); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+panel.delete('/users/:id', adminOnly, (req, res) => {
+  try { auth.deleteUser(Number(req.params.id), req.user); res.json({ ok: true }); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+app.use('/api/panel', panel);
+
+// ---------- Páginas del panel ----------
+const panelPage = file => (req, res) => res.set('Cache-Control', 'no-store').sendFile(path.join(PANEL_DIR, file));
+
+app.get('/login', (req, res, next) => (req.user ? res.redirect(homeFor(req.user)) : next()), panelPage('login.html'));
+app.get('/reservas', auth.requirePage('admin', 'gestor'), panelPage('reservas.html'));
+app.get('/admin', auth.requirePage('admin'), panelPage('web.html'));
+app.get('/admin/usuarios', auth.requirePage('admin'), panelPage('usuarios.html'));
+app.use('/panel', express.static(path.join(PANEL_DIR, 'assets'), { maxAge: '1h' }));
+
+// ---------- Web pública ----------
+// El HTML se sirve con el contenido ya incrustado: sin parpadeo y bueno para SEO
+let indexTemplate = null;
+function renderIndex() {
+  indexTemplate ??= fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf8');
+  const c = content.get();
+  const json = JSON.stringify(c).replace(/</g, String.fromCharCode(92) + 'u003c'); // "<" escapado: un texto no puede cerrar el <script>
+  return indexTemplate
+    .replace(/<title>[^<]*<\/title>/, `<title>${esc(c.seo.title)}</title>`)
+    .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${esc(c.seo.description)}">`)
+    .replace('<!--content-->', `<script>window.__ALAYAN_CONTENT__=${json}</script>`);
+}
+
+app.get(['/', '/index.html'], (req, res) => {
+  try { res.set('Cache-Control', 'no-cache').type('html').send(renderIndex()); }
+  catch (e) {
+    if (e.code !== 'ENOENT') throw e;
+    res.status(503).send('Falta compilar la web: ejecuta <code>npm run build</code>.');
+  }
+});
+
+app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '30d' }));
+app.use(express.static(DIST_DIR, { index: false, maxAge: '7d' }));
 app.get('/health', (_, res) => res.send('ok'));
 
-app.listen(PORT, () => console.log(`Alayan Driver en ${BASE_URL}  (admin: /admin)`));
+app.listen(PORT, () => console.log(`Alayan Driver en ${BASE_URL}  (panel: /login)`));

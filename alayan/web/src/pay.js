@@ -1,6 +1,6 @@
 // Envía la reserva al backend y redirige al checkout de SumUp
-window.__alayanPay = async function (f) {
-  const need = ['name','phone','email','origin','destination','date','time'];
+export async function submitBooking(f) {
+  const need = ['name', 'phone', 'email', 'origin', 'destination', 'date', 'time'];
   const missing = need.filter(k => !String(f[k] || '').trim());
   if (missing.length) return alert('Por favor completa los campos obligatorios (*).');
   try {
@@ -14,4 +14,4 @@ window.__alayanPay = async function (f) {
     if (data.checkoutUrl) window.location.href = data.checkoutUrl;
     else alert('Reserva #' + data.id + ' recibida. Te contactaremos para confirmar el pago.');
   } catch (e) { alert('Error de conexión. Inténtalo de nuevo o escríbenos por WhatsApp.'); }
-};
+}

@@ -1,0 +1,98 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Usuarios · Alayan</title>
+<link rel="stylesheet" href="/panel/panel.css">
+<style>
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:960px){.grid{grid-template-columns:1fr}}
+table{min-width:640px}
+td select{width:auto}
+#newUser>div{margin-bottom:12px}
+.roles{font-size:12px;margin-top:14px;line-height:1.6}
+</style></head><body>
+<main>
+  <div class="head"><h1>Usuarios</h1></div>
+  <div class="grid">
+    <div class="card wrap"><table>
+      <thead><tr><th>Usuario</th><th>Rol</th><th>Activo</th><th>Último acceso</th><th></th></tr></thead>
+      <tbody id="rows"><tr><td colspan="5">Cargando…</td></tr></tbody>
+    </table></div>
+    <form class="card" id="newUser">
+      <h2>Nuevo usuario</h2>
+      <div><label>Nombre</label><input name="name" placeholder="Ej: Antonio (conductor)"></div>
+      <div><label>Usuario (para entrar)</label><input name="username" required pattern="[a-zA-Z0-9._\-]{3,32}" autocomplete="off"></div>
+      <div><label>Rol</label><select name="role"><option value="gestor">Gestor de reservas</option><option value="admin">Administrador</option></select></div>
+      <div><label>Contraseña inicial (mín. 8)</label><input name="password" type="text" required minlength="8" autocomplete="off"></div>
+      <button type="submit">Crear usuario</button>
+      <div class="roles muted">
+        <b>Gestor de reservas:</b> ve y gestiona las reservas (precio, enlace de pago, estado).<br>
+        <b>Administrador:</b> además edita la web y gestiona usuarios.<br>
+        Pásale la contraseña inicial y que la cambie desde «Contraseña».
+      </div>
+    </form>
+  </div>
+</main>
+<script src="/panel/panel.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let me;
+
+async function load() {
+  const users = await api('/api/panel/users');
+  $('rows').innerHTML = users.map(u => {
+    const self = u.id === me.id;
+    return `<tr>
+      <td><b>${esc(u.name || u.username)}</b>${self ? ' <small>(tú)</small>' : ''}<br><small>${esc(u.username)}</small></td>
+      <td><select data-id="${u.id}" data-field="role" ${self ? 'disabled' : ''}>
+        ${Object.entries(ROLE_NAMES).map(([k, v]) => `<option value="${k}" ${k === u.role ? 'selected' : ''}>${v}</option>`).join('')}
+      </select></td>
+      <td><input type="checkbox" data-id="${u.id}" data-field="active" ${u.active ? 'checked' : ''} ${self ? 'disabled' : ''}></td>
+      <td><small>${esc(u.last_login || 'Nunca')}</small></td>
+      <td><div class="row" style="margin:0">
+        <button class="ghost small" data-rename="${u.id}" data-name="${esc(u.name)}">Renombrar</button>
+        ${self ? '' : `<button class="ghost small" data-reset="${u.id}" data-user="${esc(u.username)}">Nueva contraseña</button>
+        <button class="danger small" data-del="${u.id}" data-user="${esc(u.username)}">Eliminar</button>`}
+      </div></td></tr>`;
+  }).join('');
+}
+
+async function patch(id, body, okMsg) {
+  try { await api('/api/panel/users/' + id, { method: 'PATCH', body }); toast(okMsg); }
+  catch (e) { toast(e.message, 'error'); }
+  await load();
+}
+
+$('rows').addEventListener('change', e => {
+  const { id, field } = e.target.dataset;
+  if (field === 'role') patch(id, { role: e.target.value }, 'Rol cambiado');
+  if (field === 'active') patch(id, { active: e.target.checked }, e.target.checked ? 'Usuario activado' : 'Usuario desactivado');
+});
+
+$('rows').addEventListener('click', async e => {
+  const d = e.target.dataset;
+  if (d.rename) {
+    const name = prompt('Nombre visible:', d.name);
+    if (name !== null) patch(d.rename, { name }, 'Nombre cambiado');
+  }
+  if (d.reset) {
+    const password = prompt(`Nueva contraseña para «${d.user}» (mín. 8 caracteres). Se cerrará su sesión.`);
+    if (password) patch(d.reset, { password }, 'Contraseña cambiada');
+  }
+  if (d.del && confirm(`¿Eliminar el usuario «${d.user}»?`)) {
+    try { await api('/api/panel/users/' + d.del, { method: 'DELETE' }); toast('Usuario eliminado'); }
+    catch (err) { toast(err.message, 'error'); }
+    await load();
+  }
+});
+
+$('newUser').onsubmit = async e => {
+  e.preventDefault();
+  try {
+    await api('/api/panel/users', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) });
+    e.target.reset();
+    toast('Usuario creado');
+    await load();
+  } catch (err) { toast(err.message, 'error'); }
+};
+
+initPanel('usuarios').then(u => { me = u; load(); });
+</script></body></html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Contenido web · Alayan</title>
+<link rel="stylesheet" href="/panel/panel.css">
+<style>
+.layout{display:grid;grid-template-columns:200px minmax(0,1fr);gap:20px;align-items:start}
+.side{position:sticky;top:70px;display:flex;flex-direction:column;gap:2px}
+.side button{background:transparent;color:var(--muted);justify-content:flex-start;border-radius:8px;padding:8px 12px;font-weight:500;font-size:13px}
+.side button:hover{color:var(--text);background:#ffffff08}
+.side button.on{background:#ffffff14;color:var(--text)}
+@media (max-width:860px){
+  .layout{grid-template-columns:1fr}
+  .side{position:static;flex-direction:row;overflow-x:auto;padding-bottom:4px}
+}
+.section-title{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.section-title h2{font-size:20px;margin:0}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:11px;letter-spacing:.12em;color:var(--gold);margin:0 0 6px}
+.field{margin-bottom:14px}
+.field>label{color:var(--text);font-size:13px;font-weight:500}
+.hint{display:block;margin:-2px 0 6px;font-size:12px}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lang{position:relative}
+.lng{position:absolute;right:8px;top:7px;font-size:10px;letter-spacing:.1em;color:#ffffff50;pointer-events:none}
+.lang input,.lang textarea{padding-right:34px}
+@media (max-width:640px){.pair,.cols{grid-template-columns:1fr}.cols{display:none}}
+fieldset.group{border:1px solid var(--line);border-radius:12px;padding:12px 14px 2px;margin:0 0 16px}
+fieldset.group legend{padding:0 6px;color:var(--gold);font-size:13px;font-weight:600}
+.list{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 16px}
+.list-head{display:flex;justify-content:space-between;margin-bottom:10px}
+.list-head label{color:var(--gold);font-size:13px;font-weight:600;margin:0}
+.item{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px 0;margin-bottom:10px}
+.item-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;font-size:13px}
+.item.compact{display:flex;gap:8px;align-items:flex-start;padding:8px}
+.item.compact .field{flex:1;margin:0}
+.ctrl{display:flex;gap:4px}
+.ctrl button{padding:3px 8px;font-size:12px}
+.check{display:flex;gap:8px;align-items:center;margin-bottom:14px;font-size:13px}
+.check input{width:16px;height:16px}
+.images{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.images .card img{width:100%;height:150px;object-fit:contain;background:#000;border-radius:8px;margin-bottom:10px}
+.images .row{flex-wrap:wrap}
+.danger-zone{margin-top:28px;border-color:#6b222288}
+#savebar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:#151515f5;border-top:1px solid var(--gold)}
+body.has-savebar main{padding-bottom:90px}
+</style></head><body>
+<main>
+  <div class="head">
+    <h1>Contenido de la web</h1>
+    <small id="meta"></small>
+  </div>
+  <div class="layout">
+    <nav class="side" id="side"></nav>
+    <section class="card" id="panel">Cargando…</section>
+  </div>
+</main>
+<div id="savebar" hidden>
+  <span>Tienes cambios sin guardar</span>
+  <button class="ghost" id="discard">Descartar</button>
+  <button id="save">Guardar y publicar</button>
+</div>
+<script src="/panel/panel.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+
+const SECTION_NAMES = {
+  general: 'General y SEO', images: 'Imágenes',
+  brand: 'Marca', nav: 'Menú', hero: 'Portada', exp: 'Experiencia', slogans: 'Lemas', fleet: 'Flota',
+  classes: 'Clases y precios', drivers: 'Conductores', destinations: 'Destinos', services: 'Servicios',
+  booking: 'Reserva', footer: 'Pie de página'
+};
+const IMAGE_NAMES = { logo: 'Logo', hero: 'Portada (imagen principal)', ford: 'Coche 1 (Ford)', tesla: 'Coche 2 (Tesla)' };
+
+const KEY_LABELS = {
+  name: 'Nombre', tagline: 'Subtítulo', fleet: 'Flota', classes: 'Clases', drivers: 'Conductores', destinations: 'Destinos',
+  services: 'Servicios', book: 'Reservar', badge: 'Etiqueta', scroll: 'Texto bajo la portada',
+  alt: 'Descripción de la imagen (accesibilidad y Google)', kicker: 'Antetítulo', title: 'Título', desc: 'Descripción',
+  cta: 'Botón', stats: 'Cifras', value: 'Cifra', label: 'Texto', values: 'Línea de valores', left: 'Lema 1', right: 'Lema 2',
+  items: 'Elementos', hybrid: 'Texto híbrido', subtitle: 'Subtítulo', plate: 'Etiqueta', cards: 'Tarjetas', price: 'Precio',
+  features: 'Características', team: 'Etiqueta del equipo', points: 'Puntos', text: 'Texto', list: 'Destinos', city: 'Ciudad',
+  monument: 'Monumento', note: 'Nota', detail: 'Detalle', includesTitle: 'Título de la lista', includes: 'Qué incluye',
+  cancel: 'Política de cancelación', fleetNote: 'Nota de la flota', fleetSign: 'Firma', fields: 'Etiquetas del formulario',
+  placeholders: 'Textos de ejemplo del formulario', company: 'Empresa', phone: 'Teléfono', email: 'Email', origin: 'Origen',
+  destination: 'Destino', date: 'Fecha', time: 'Hora', pax: 'Pasajeros', luggage: 'Maletas', flight: 'Vuelo', sign: 'Cartel',
+  amount: 'Importe', pay: 'Botón pagar', whatsapp: 'Botón WhatsApp', whatsappMessage: 'Mensaje de WhatsApp',
+  secure: 'Texto de pago seguro', slogan: 'Eslogan', description: 'Descripción', firm: 'Firma', rights: 'Copyright',
+  bottomLeft: 'Barra inferior (izquierda)', bottomRight: 'Barra inferior (derecha)'
+};
+const PATH_LABELS = {
+  'brand.name': 'Nombre de la marca', 'nav.book': 'Botón reservar', 'hero.badge': 'Etiqueta sobre la portada',
+  'fleet.ford': 'Coche 1 (imagen «Coche 1»)', 'fleet.tesla': 'Coche 2 (imagen «Coche 2»)', 'fleet.tesla.badge': 'Etiqueta en la esquina',
+  'slogans.items': 'Etiquetas bajo la flota', 'classes.popular': 'Etiqueta «más reservado»',
+  'classes.book': 'Texto del botón (va seguido del nombre de la clase)', 'classes.cards[].popular': 'Destacada (fondo negro y etiqueta)',
+  'services.items': 'Servicios', 'footer.services': 'Lista de servicios', 'footer.tagline': 'Frase inicial'
+};
+const HINTS = {
+  'hero.badge': 'Vacío = no se muestra.',
+  'fleet.tesla.badge': 'Vacío = no se muestra.',
+  'footer.bottomLeft': 'Vacío = no se muestra.',
+  'footer.rights': '{year} se sustituye por el año actual.',
+  'booking.whatsappMessage': 'Se rellena con lo que escriba el cliente: {origin} {destination} {date} {time} {pax} {luggage} {flight} {sign}'
+};
+
+let defaults, loaded, state, savedJson = '', current = 'general';
+
+// ---------- utilidades ----------
+function h(tag, props = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'class') el.className = v;
+    else if (k in el) el[k] = v;
+    else el.setAttribute(k, v);
+  }
+  el.append(...kids.flat(Infinity).filter(k => k != null && k !== false));
+  return el;
+}
+const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+const getAt = (obj, path) => path.reduce((o, k) => o?.[k], obj);
+const setAt = (obj, path, v) => { getAt(obj, path.slice(0, -1))[path.at(-1)] = v; };
+const tplAt = path => path.reduce((t, k) => (Array.isArray(t) ? t[0] : t?.[k]), defaults.ES);
+const pathKey = path => path.reduce((s, k) => (typeof k === 'number' ? s + '[]' : s ? s + '.' + k : k), '');
+const labelFor = path => PATH_LABELS[pathKey(path)] || KEY_LABELS[path.at(-1)] || path.at(-1);
+const blank = t => Array.isArray(t) ? [] : isObj(t) ? Object.fromEntries(Object.keys(t).map(k => [k, blank(t[k])])) : typeof t === 'boolean' ? false : '';
+const texts = s => ({ contact: s.contact, seo: s.seo, ES: s.ES, EN: s.EN });
+
+// ES y EN deben tener listas del mismo tamaño para editarlas en paralelo
+function align(es, en, tpl) {
+  if (Array.isArray(tpl)) {
+    while (en.length < es.length) en.push(structuredClone(es[en.length]));
+    while (es.length < en.length) es.push(structuredClone(en[es.length]));
+    es.forEach((_, i) => align(es[i], en[i], tpl[0]));
+  } else if (isObj(tpl)) {
+    for (const k of Object.keys(tpl)) align(es[k], en[k], tpl[k]);
+  }
+}
+
+function setState(content) {
+  loaded = content;
+  state = structuredClone(content);
+  align(state.ES, state.EN, defaults.ES);
+  savedJson = JSON.stringify(texts(state));
+  refreshDirty();
+}
+
+function refreshDirty() {
+  const dirty = JSON.stringify(texts(state)) !== savedJson;
+  $('savebar').hidden = !dirty;
+  document.body.classList.toggle('has-savebar', dirty);
+  return dirty;
+}
+
+function showMeta(meta) {
+  $('meta').textContent = meta
+    ? `Última modificación: ${new Date(meta.updatedAt.replace(' ', 'T') + 'Z').toLocaleString('es-ES')} por ${meta.updatedBy}`
+    : 'Mostrando los textos originales (aún no se ha editado nada).';
+}
+
+// ---------- campos ----------
+function renderField(path, { bare = false } = {}) {
+  const long = String(tplAt(path) ?? '').length > 60 || String(getAt(state.ES, path) ?? '').length > 60;
+  const input = lang => h('div', { class: 'lang' },
+    h(long ? 'textarea' : 'input', {
+      value: getAt(state[lang], path) ?? '',
+      rows: long ? 3 : null,
+      oninput: e => { setAt(state[lang], path, e.target.value); refreshDirty(); }
+    }),
+    h('span', { class: 'lng' }, lang));
+  const hint = HINTS[pathKey(path)];
+  return h('div', { class: 'field' },
+    !bare && h('label', {}, labelFor(path)),
+    hint && h('small', { class: 'hint muted' }, hint),
+    h('div', { class: 'pair' }, input('ES'), input('EN')));
+}
+
+function renderCheck(path) {
+  return h('label', { class: 'check' },
+    h('input', {
+      type: 'checkbox', checked: !!getAt(state.ES, path),
+      onchange: e => { setAt(state.ES, path, e.target.checked); setAt(state.EN, path, e.target.checked); refreshDirty(); }
+    }),
+    labelFor(path));
+}
+
+function changeList(path, fn) {
+  const y = scrollY;
+  for (const lang of ['ES', 'EN']) fn(getAt(state[lang], path));
+  refreshDirty();
+  renderSection();
+  scrollTo(0, y);
+}
+
+function renderList(path, tpl) {
+  const items = getAt(state.ES, path);
+  const objItems = isObj(tpl[0]);
+  const ctrl = i => h('div', { class: 'ctrl' },
+    h('button', { type: 'button', class: 'ghost', title: 'Subir', disabled: i === 0, onclick: () => changeList(path, a => a.splice(i - 1, 0, a.splice(i, 1)[0])) }, '↑'),
+    h('button', { type: 'button', class: 'ghost', title: 'Bajar', disabled: i === items.length - 1, onclick: () => changeList(path, a => a.splice(i + 1, 0, a.splice(i, 1)[0])) }, '↓'),
+    h('button', { type: 'button', class: 'danger', title: 'Quitar', onclick: () => changeList(path, a => a.splice(i, 1)) }, '✕'));
+
+  return h('div', { class: 'list' },
+    h('div', { class: 'list-head' }, h('label', {}, labelFor(path)), h('small', { class: 'muted' }, `${items.length} elementos`)),
+    items.map((item, i) => objItems
+      ? h('div', { class: 'item' },
+          h('div', { class: 'item-head' }, h('b', {}, `${i + 1}. ${Object.values(item).find(v => typeof v === 'string' && v) || ''}`), ctrl(i)),
+          Object.keys(tpl[0]).map(k => renderNode([...path, i, k])))
+      : h('div', { class: 'item compact' }, renderField([...path, i], { bare: true }), ctrl(i))),
+    h('button', { type: 'button', class: 'ghost small', onclick: () => changeList(path, a => a.push(blank(tpl[0]))) }, '+ Añadir'));
+}
+
+function renderNode(path) {
+  const tpl = tplAt(path);
+  if (Array.isArray(tpl)) return renderList(path, tpl);
+  if (isObj(tpl)) {
+    const kids = Object.keys(tpl).map(k => renderNode([...path, k]));
+    return path.length === 1 ? kids : h('fieldset', { class: 'group' }, h('legend', {}, labelFor(path)), kids);
+  }
+  return typeof tpl === 'boolean' ? renderCheck(path) : renderField(path);
+}
+
+// ---------- secciones ----------
+function single(label, value, onInput, { hint, long } = {}) {
+  return h('div', { class: 'field' },
+    h('label', {}, label),
+    hint && h('small', { class: 'hint muted' }, hint),
+    h(long ? 'textarea' : 'input', { value, rows: long ? 3 : null, oninput: e => { onInput(e.target.value); refreshDirty(); } }));
+}
+
+function renderGeneral() {
+  return [
+    single('Número de WhatsApp', state.contact.whatsapp, v => { state.contact.whatsapp = v; },
+      { hint: 'Con prefijo de país, sin «+» ni espacios. Ej: 34612345678. Lo usan el botón WA y «Consultar por WhatsApp».' }),
+    h('p', {}, h('a', { href: '#', onclick: e => { e.preventDefault(); open('https://wa.me/' + state.contact.whatsapp.replace(/\D/g, '')); } }, 'Probar el enlace de WhatsApp ↗')),
+    h('h2', { style: 'margin-top:24px' }, 'Google (SEO)'),
+    single('Título de la página', state.seo.title, v => { state.seo.title = v; }, { hint: 'Lo que sale en la pestaña del navegador y en Google.' }),
+    single('Descripción', state.seo.description, v => { state.seo.description = v; }, { hint: 'El texto bajo el título en Google. Ideal 140-160 caracteres.', long: true }),
+    h('div', { class: 'card danger-zone' },
+      h('h2', {}, 'Restaurar textos originales'),
+      h('p', { class: 'muted' }, 'Vuelve a poner todos los textos, el WhatsApp y el SEO como venían de fábrica. Las imágenes no se tocan.'),
+      h('button', { type: 'button', class: 'danger', onclick: resetAll }, 'Restaurar todo'))
+  ];
+}
+
+function renderImages() {
+  return [
+    h('p', { class: 'muted' }, 'Las imágenes se publican en cuanto las subes. JPG, PNG o WebP, máximo 8 MB. Para fotos, mejor JPG de unos 1600 px de ancho.'),
+    h('div', { class: 'images' }, Object.keys(defaults.images).map(slot => {
+      const url = state.images[slot], custom = url !== defaults.images[slot];
+      const file = h('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp', hidden: true, onchange: e => uploadImage(slot, e.target.files[0]) });
+      return h('div', { class: 'card' },
+        h('h2', {}, IMAGE_NAMES[slot] || slot),
+        h('img', { src: url, alt: '' }),
+        file,
+        h('div', { class: 'row' },
+          h('button', { type: 'button', onclick: () => file.click() }, 'Cambiar imagen'),
+          custom && h('button', { type: 'button', class: 'ghost', onclick: () => resetImage(slot) }, 'Restaurar original')));
+    }))
+  ];
+}
+
+function renderSection() {
+  $('side').replaceChildren(...Object.entries(SECTION_NAMES).map(([key, name]) =>
+    h('button', { type: 'button', class: key === current ? 'on' : '', onclick: () => { current = key; renderSection(); scrollTo(0, 0); } }, name)));
+
+  const isText = !['general', 'images'].includes(current);
+  $('panel').replaceChildren(...[
+    h('div', { class: 'section-title' }, h('h2', {}, SECTION_NAMES[current])),
+    isText && h('div', { class: 'cols' }, h('span', {}, 'ESPAÑOL'), h('span', {}, 'ENGLISH')),
+    current === 'general' ? renderGeneral() : current === 'images' ? renderImages() : renderNode([current])
+  ].flat().filter(Boolean));
+}
+
+// ---------- acciones ----------
+// Las imágenes se guardan aparte: no se pisan los textos que estés editando
+function applyImages(data) {
+  loaded.images = data.content.images;
+  state.images = structuredClone(data.content.images);
+  showMeta(data.meta);
+  renderSection();
+}
+
+async function uploadImage(slot, file) {
+  if (!file) return;
+  if (file.size > 8 * 1024 * 1024) return toast('La imagen pesa más de 8 MB.', 'error');
+  try { applyImages(await api('/api/panel/images/' + slot, { method: 'POST', file })); toast('Imagen publicada'); }
+  catch (e) { toast(e.message, 'error'); }
+}
+
+async function resetImage(slot) {
+  try { applyImages(await api('/api/panel/images/' + slot, { method: 'DELETE' })); toast('Imagen original restaurada'); }
+  catch (e) { toast(e.message, 'error'); }
+}
+
+async function save() {
+  $('save').disabled = true;
+  try {
+    const data = await api('/api/panel/content', { method: 'PUT', body: texts(state) });
+    setState(data.content);
+    showMeta(data.meta);
+    renderSection();
+    toast('Guardado. Los cambios ya están en la web.');
+  } catch (e) { toast(e.message, 'error'); }
+  $('save').disabled = false;
+}
+
+async function resetAll() {
+  if (!confirm('¿Seguro? Se perderán todos los textos editados.')) return;
+  try {
+    const data = await api('/api/panel/content/reset', { method: 'POST' });
+    setState(data.content);
+    showMeta(data.meta);
+    renderSection();
+    toast('Textos originales restaurados');
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+$('save').onclick = save;
+$('discard').onclick = () => { setState(loaded); renderSection(); };
+addEventListener('beforeunload', e => { if (state && refreshDirty()) e.preventDefault(); });
+
+initPanel('web').then(async () => {
+  const data = await api('/api/panel/content');
+  defaults = data.defaults;
+  setState(data.content);
+  showMeta(data.meta);
+  renderSection();
+});
+</script></body></html>

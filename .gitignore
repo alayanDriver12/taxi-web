@@ -17,3 +17,6 @@ data/
 Thumbs.db
 .vscode/
 *.log
+
+# Web compilada (se genera con npm run build)
+dist/
