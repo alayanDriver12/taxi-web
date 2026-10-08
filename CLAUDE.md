@@ -43,9 +43,13 @@ Trabajar en `develop`, probar, y pasar a `main` con PR.
 
 Railway: proyecto `meticulous-vitality`, servicio `taxi-web` (root `/alayan`, volumen en `/data`).
 - production: rama `main` · https://taxi-web-production-a693.up.railway.app
-- staging: rama `develop` · https://taxi-web-staging.up.railway.app · `SUMUP_MOCK=true`
+- staging: rama `develop` · https://taxi-web-staging.up.railway.app · `SUMUP_MOCK=true` · región Ámsterdam
 CLI: `railway link --project meticulous-vitality --environment staging`. En PowerShell 5.1 pasar JSON a la CLI
-con `cmd /c "..."` (si no, se pierden las comillas). La región y el borrado de servicios se hacen en la web.
+con `cmd /c "..."` (si no, se pierden las comillas). Borrar servicios: en la web.
+**Cambiar de región** (la web no deja con volumen en plan Trial): mutación `environmentPatchCommit` con
+`volumes.<volumeId>.region` y `services.<serviceId>.deploy.multiRegionConfig = {"ams":{"numReplicas":1},"sfo":null}`.
+Railway migra el volumen (unos minutos sin servicio) y conserva los datos: probado en staging el 8 oct 2026.
+Antes de hacerlo en producción: copia nativa con `volumeInstanceBackupCreate` y exportar el CSV.
 
 ## Variables de entorno (en Railway, nunca en el repo)
 `BASE_URL` (https, sin barra final), `ADMIN_USER`/`ADMIN_PASS` (solo crean el primer admin; mín. 8 caracteres),
@@ -63,9 +67,9 @@ panel en `/login`. Para el diseño con recarga instantánea: `npm run dev:web` (
 - Nunca subir `.env`, claves ni ficheros `.db` (ya en `.gitignore`).
 
 ## Pendiente (octubre 2026)
-**Hecho (8 oct 2026):** entorno staging creado y probado · producción con `ADMIN_PASS` de 16 caracteres y `BASE_URL`.
+**Hecho (8 oct 2026):** entorno staging creado, probado y en Ámsterdam · producción con `ADMIN_PASS` de 16 caracteres y `BASE_URL`.
 **Configuración:** cuenta en plan **Trial → pasar a Hobby** (si no, la web se para al acabar la prueba) · región
-Europa (Ámsterdam): primero staging, luego producción con copia previa (Railway tiene copias nativas de volumen) ·
+Europa (Ámsterdam) en producción, con copia previa (ver «Cambiar de región») ·
 borrar el servicio vacío `taxi-web Copy` · dominio IONOS → Cloudflare → Railway (SSL *Full (strict)*) y
 `BEHIND_CLOUDFLARE=true` · Resend con dominio verificado · bucket R2 + token · pasar `develop` → `main` (comprobar
 que la reserva existente sobrevive; no había SumUp configurado en producción, así que no hay enlaces antiguos).
