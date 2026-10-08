@@ -22,11 +22,17 @@ desarrollador: **español**. Todo el código vive en `alayan/`; el detalle técn
 | `lib/content.js` + `content/defaults.js` | textos ES/EN editables, datos legales, SEO, imágenes |
 | `lib/payments.js` + `lib/sumup.js` | presupuestos, enlaces `/pago/<token>`, checkouts SumUp, modo simulación |
 | `lib/mailer.js` + `lib/notify.js` | emails (Resend) y textos de avisos/WhatsApp en el idioma de la reserva |
+| `lib/pricing.js` | tarifas (fijo aeropuerto, € por km, Tarifa 2, extras, tabla de destinos, cobertura) y `quote()` |
+| `lib/fleet.js` | vehículos de la flota y sus fotos (carrusel) |
 | `lib/backup.js` | copia nocturna a Cloudflare R2 (firma SigV4 propia, sin SDK) o local |
 
 ## Decisiones tomadas (no cambiar sin hablarlo)
-- **No hay precios fijos.** El cliente solicita → el admin pone precio y envía presupuesto → el cliente paga en
+- **Traslados solo en Andalucía.** Aeropuerto ↔ Sevilla (precio fijo, 35 € hasta 4 pax / 50 € hasta 8) y pueblos y
+  ciudades de la tabla (€/km con mínimo y suplemento corto) **se pagan al momento**: el precio lo calcula siempre el
+  servidor (`pricing.quote`). La Tarifa 2 (×1,2) no se aplica al precio fijo. Sillas infantiles y alzador: 5 €/unidad
+  (editable). «Otro trayecto» sigue el flujo de presupuesto: el admin pone precio → el cliente paga en
   `/pago/<token>` (no caduca). El checkout de SumUp se crea al pulsar «Pagar» porque **caduca a los 30 min**.
+- Todo lo de precios se edita en `/admin/tarifas` y las fotos de los coches en `/admin/flota`.
 - El estado de un pago se verifica **siempre contra la API de SumUp**; nunca se confía en el cuerpo del webhook.
 - Se guardan todos los intentos de pago (`payments`). Una reserva pagada no admite cambios de precio.
 - Emails con **Resend** (API HTTPS) porque **Railway Hobby bloquea el SMTP**. WhatsApp = enlace `wa.me` con el
@@ -80,4 +86,5 @@ borrar el proyecto antiguo `meticulous-vitality` · dominio IONOS → Cloudflare
 **Cliente:** datos legales en `/admin` (bloquea producción) · su número de WhatsApp real · API key y merchant code de
 SumUp · hojas de reclamaciones de la Junta · Seguro Obligatorio de Viajeros · revisar `/condiciones` con un asesor.
 **Al final:** pago real de pocos euros y comprobar que los emails llegan (y no van a spam).
-**Después de salir:** tabla de tarifas fijas para pago inmediato en rutas típicas.
+**Tarifas (oct 2026):** hecho (tarifas en el panel, carrusel de fotos, formulario con precio y pago al momento). Que el
+cliente revise en `/admin/tarifas` los km de la tabla (su web tenía Jerez a 95 € y Madrid con km distintos) y sus festivos locales.

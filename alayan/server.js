@@ -11,6 +11,8 @@ const { createPayments } = require('./lib/payments');
 const { createMailer } = require('./lib/mailer');
 const { createNotifier } = require('./lib/notify');
 const { createBackups } = require('./lib/backup');
+const { createPricing } = require('./lib/pricing');
+const { createFleet } = require('./lib/fleet');
 
 const {
   PORT = 3000, BASE_URL = `http://localhost:${PORT}`,
@@ -53,6 +55,10 @@ CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings(date);
 const bookingCols = db.prepare('PRAGMA table_info(bookings)').all().map(c => c.name);
 if (!bookingCols.includes('privacy_accepted_at')) db.exec('ALTER TABLE bookings ADD COLUMN privacy_accepted_at TEXT'); // prueba de aceptación (RGPD)
 if (!bookingCols.includes('lang')) db.exec("ALTER TABLE bookings ADD COLUMN lang TEXT NOT NULL DEFAULT 'ES'"); // idioma de los avisos
+if (!bookingCols.includes('route_mode')) db.exec("ALTER TABLE bookings ADD COLUMN route_mode TEXT NOT NULL DEFAULT 'custom'"); // airport | route | custom
+if (!bookingCols.includes('destination_id')) db.exec('ALTER TABLE bookings ADD COLUMN destination_id TEXT');
+if (!bookingCols.includes('extras')) db.exec('ALTER TABLE bookings ADD COLUMN extras TEXT'); // JSON: sillas, movilidad reducida…
+if (!bookingCols.includes('tariff')) db.exec('ALTER TABLE bookings ADD COLUMN tariff TEXT'); // T1 | T2 si el precio es automático
 
 // Conservación (política de privacidad, apartado 4): las solicitudes que no llegaron a contratarse
 // se borran a los 12 meses. Las pagadas o confirmadas se conservan por obligaciones contables y fiscales.
@@ -68,6 +74,8 @@ setInterval(purgeStaleBookings, 24 * 60 * 60 * 1000).unref();
 
 const auth = createAuth(db, { secure: BASE_URL.startsWith('https://') });
 const content = createContentStore(db);
+const pricing = createPricing(db);
+const fleet = createFleet(db);
 const sumup = createSumUp({ apiKey: SUMUP_API_KEY, merchantCode: SUMUP_MERCHANT_CODE, mock: SUMUP_MOCK === 'true', baseUrl: BASE_URL });
 const payments = createPayments(db, sumup, { baseUrl: BASE_URL, onPaid: b => notifier.bookingPaid(b) });
 const mailer = createMailer(db, { apiKey: RESEND_API_KEY, from: MAIL_FROM, siteUrl: BASE_URL, brand: 'ALAYAN DRIVER' });
@@ -117,27 +125,73 @@ const limit = opts => rateLimit({ windowMs: 15 * 60 * 1000, standardHeaders: tru
 
 const limiter = limit({ max: 20 });
 
+const EXTRAS = ['booster', 'baby', 'child', 'pmr', 'other'];
+
+// Tres tipos de reserva:
+//  airport → aeropuerto ↔ Sevilla, precio fijo          → paga al momento
+//  route   → Sevilla ↔ destino de la tabla, precio por km → paga al momento
+//  custom  → trayecto libre                              → presupuesto (el admin pone el precio)
+// El precio lo calcula siempre el servidor (pricing.quote); lo que mande el navegador se ignora.
 app.post('/api/bookings', limiter, async (req, res) => {
   const b = req.body || {};
+  const mode = ['airport', 'route', 'custom'].includes(b.mode) ? b.mode : 'custom';
+  const extras = Object.fromEntries(EXTRAS.filter(k => b.extras?.[k] === true).map(k => [k, true]));
+  if (extras.other) extras.otherText = clean(b.extrasOther, 200);
   const d = {
     name: clean(b.name, 100), company: clean(b.company, 100), phone: clean(b.phone, 30), email: clean(b.email, 120),
-    origin: clean(b.origin), destination: clean(b.destination), date: clean(b.date, 10), time: clean(b.time, 5),
-    pax: Math.min(Math.max(parseInt(b.pax) || 1, 1), 50), luggage: Math.min(Math.max(parseInt(b.luggage) || 0, 0), 50),
+    date: clean(b.date, 10), time: clean(b.time, 5),
+    pax: parseInt(b.pax) || 1, luggage: Math.min(Math.max(parseInt(b.luggage) || 0, 0), 50),
     flight: clean(b.flight, 60), sign: clean(b.sign, 100),
-    lang: b.lang === 'EN' ? 'EN' : 'ES'
+    lang: b.lang === 'EN' ? 'EN' : 'ES',
+    route_mode: mode, destination_id: null, extras: Object.keys(extras).length ? JSON.stringify(extras) : null,
+    amount_eur: null, tariff: null
   };
-  if (!d.name || !d.phone || !d.origin || !d.destination || !d.date || !d.time)
-    return res.status(400).json({ error: 'Faltan campos obligatorios.' });
+  if (!d.name || !d.phone || !d.date || !d.time) return res.status(400).json({ error: 'Faltan campos obligatorios.' });
   if (b.privacy !== true) return res.status(400).json({ error: 'Debes aceptar la política de privacidad y las condiciones del servicio.' });
   if (!/^\S+@\S+\.\S+$/.test(d.email)) return res.status(400).json({ error: 'Email no válido.' });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date) || d.date < new Date().toISOString().slice(0, 10))
     return res.status(400).json({ error: 'La fecha debe ser hoy o posterior.' });
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.time)) return res.status(400).json({ error: 'Hora no válida.' });
 
-  // Es una solicitud: el precio lo pone después el admin y el cliente paga desde /pago/<token>
-  const info = db.prepare(`INSERT INTO bookings (name,company,phone,email,origin,destination,date,time,pax,luggage,flight,sign,lang,privacy_accepted_at)
-    VALUES (@name,@company,@phone,@email,@origin,@destination,@date,@time,@pax,@luggage,@flight,@sign,@lang,datetime('now'))`).run(d);
-  res.status(201).json({ id: info.lastInsertRowid });
-  notifier.bookingReceived(db.prepare('SELECT * FROM bookings WHERE id=?').get(info.lastInsertRowid)).catch(e => console.error(e));
+  const p = pricing.get();
+  const at = (place, addr) => (addr ? `${place} — ${addr}` : place);
+  const address = clean(b.address, 150), addressDest = clean(b.addressDest, 150);
+  let q;
+  try {
+    q = pricing.quote({ mode, destinationId: clean(b.destinationId, 80), pax: d.pax, pmr: !!extras.pmr, extras, date: d.date, time: d.time });
+  } catch (e) { return res.status(400).json({ error: e.message }); }
+
+  if (mode === 'airport') {
+    const toAirport = b.direction === 'toAirport';
+    [d.origin, d.destination] = toAirport ? [at(p.airport.city, address), p.airport.name] : [p.airport.name, at(p.airport.city, address)];
+  } else if (mode === 'route') {
+    const sevilla = at(p.airport.city, address), place = at(q.destination.name, addressDest);
+    [d.origin, d.destination] = b.direction === 'toSevilla' ? [place, sevilla] : [sevilla, place];
+    d.destination_id = q.destination.id;
+  } else {
+    d.origin = clean(b.origin); d.destination = clean(b.destination);
+    if (!d.origin || !d.destination) return res.status(400).json({ error: 'Faltan campos obligatorios.' });
+  }
+  if (q) { d.amount_eur = q.amount; d.tariff = q.tariff; }
+
+  const info = db.prepare(`INSERT INTO bookings (name,company,phone,email,origin,destination,date,time,pax,luggage,flight,sign,lang,
+      route_mode,destination_id,extras,amount_eur,tariff,privacy_accepted_at)
+    VALUES (@name,@company,@phone,@email,@origin,@destination,@date,@time,@pax,@luggage,@flight,@sign,@lang,
+      @route_mode,@destination_id,@extras,@amount_eur,@tariff,datetime('now'))`).run(d);
+  const id = info.lastInsertRowid;
+  // Con precio automático se crea ya el enlace de pago y el cliente va directo a pagar
+  const payUrl = q ? payments.ensureQuote(id) : null;
+  res.status(201).json({ id, payUrl, amount: d.amount_eur, tariff: d.tariff });
+  notifier.bookingReceived(db.prepare('SELECT * FROM bookings WHERE id=?').get(id)).catch(e => console.error(e));
+});
+
+// Precio orientativo para la web (el que vale es el que calcula la reserva)
+app.post('/api/quote', limit({ max: 300 }), (req, res) => {
+  const b = req.body || {};
+  try {
+    const q = pricing.quote({ mode: b.mode, destinationId: clean(b.destinationId, 80), pax: parseInt(b.pax) || 1, pmr: b.extras?.pmr === true || b.pmr === true, extras: b.extras && typeof b.extras === 'object' ? b.extras : {}, date: clean(b.date, 10), time: clean(b.time, 5) });
+    res.json(q ? { amount: q.amount, extrasAmount: q.extrasAmount, tariff: q.tariff } : { amount: null });
+  } catch (e) { res.status(400).json({ error: e.message }); }
 });
 
 // SumUp avisa de cambios de estado. No nos fiamos del cuerpo: se consulta siempre su API.
@@ -206,7 +260,10 @@ h1{font-size:20px}b{font-size:28px;display:block;margin:8px 0 20px}button{width:
   });
 }
 
-app.get('/api/content', (req, res) => res.set('Cache-Control', 'no-cache').json(content.get()));
+// Todo lo que necesita la web: textos, tarifas (con precios calculados) y flota
+const siteData = () => ({ ...content.get(), pricing: pricing.publicView(), fleet: fleet.get() });
+
+app.get('/api/content', (req, res) => res.set('Cache-Control', 'no-cache').json(siteData()));
 
 // ---------- Sesión ----------
 const loginLimiter = limit({ max: 10, skipSuccessfulRequests: true, message: { error: 'Demasiados intentos. Espera unos minutos.' } });
@@ -378,6 +435,39 @@ panel.delete('/users/:id', adminOnly, (req, res) => {
   catch (e) { res.status(400).json({ error: e.message }); }
 });
 
+// Tarifas
+const pricingResponse = () => ({ pricing: pricing.get(), preview: pricing.publicView().destinations, meta: pricing.meta() });
+panel.get('/pricing', adminOnly, (req, res) => res.json(pricingResponse()));
+panel.put('/pricing', adminOnly, (req, res) => {
+  try { pricing.save(req.body || {}, req.user.username); res.json(pricingResponse()); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+panel.post('/pricing/reset', adminOnly, (req, res) => { pricing.reset(req.user.username); res.json(pricingResponse()); });
+
+// Flota: textos y orden de los coches, y sus fotos (varias por coche)
+panel.get('/fleet', adminOnly, (req, res) => res.json({ fleet: fleet.get(), maxImages: fleet.MAX_IMAGES }));
+panel.put('/fleet', adminOnly, (req, res) => {
+  const before = fleet.get().flatMap(c => c.images);
+  const after = fleet.saveCars(req.body?.fleet, req.user.username);
+  const kept = new Set(after.flatMap(c => c.images));
+  before.filter(u => !kept.has(u)).forEach(removeUpload); // fotos quitadas: se borran del disco
+  res.json({ fleet: after, maxImages: fleet.MAX_IMAGES });
+});
+panel.post('/fleet/:id/images', adminOnly, express.raw({ type: 'image/*', limit: '8mb' }), (req, res) => {
+  const buf = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
+  const type = IMAGE_TYPES.find(t => t.test(buf));
+  if (!type) return res.status(400).json({ error: 'Formato no válido. Usa JPG, PNG o WebP.' });
+  if (!/^[a-z0-9-]{1,40}$/.test(req.params.id)) return res.status(404).json({ error: 'Vehículo no encontrado.' });
+  const file = `car-${req.params.id}-${Date.now()}.${type.ext}`;
+  try {
+    fs.writeFileSync(path.join(UPLOADS_DIR, file), buf);
+    res.json({ fleet: fleet.addImage(req.params.id, `/uploads/${file}`, req.user.username), maxImages: fleet.MAX_IMAGES });
+  } catch (e) {
+    fs.rm(path.join(UPLOADS_DIR, file), { force: true }, () => {});
+    res.status(400).json({ error: e.message });
+  }
+});
+
 // Copias de seguridad
 panel.get('/backup', adminOnly, (req, res) => res.json({ mode: backups.mode, last: backups.status() }));
 panel.post('/backup', adminOnly, async (req, res) => {
@@ -394,6 +484,10 @@ app.get('/login', (req, res, next) => (req.user ? res.redirect(homeFor(req.user)
 app.get('/reservas', auth.requirePage('admin', 'gestor'), panelPage('reservas.html'));
 app.get('/admin', auth.requirePage('admin'), panelPage('web.html'));
 app.get('/admin/usuarios', auth.requirePage('admin'), panelPage('usuarios.html'));
+// Icono de pestaña: el logo actual (los navegadores lo piden aunque no se enlace)
+app.get('/favicon.ico', (req, res) => res.redirect(302, content.get().images.logo));
+app.get('/admin/tarifas', auth.requirePage('admin'), panelPage('tarifas.html'));
+app.get('/admin/flota', auth.requirePage('admin'), panelPage('flota.html'));
 app.use('/panel', express.static(path.join(PANEL_DIR, 'assets'), { maxAge: '1h' }));
 
 // ---------- Web pública ----------
@@ -402,7 +496,7 @@ let indexTemplate = null;
 function renderIndex(pageTitle) {
   // En producción se lee una vez; en local se relee para que un `npm run build` se vea sin reiniciar
   if (!indexTemplate || process.env.NODE_ENV !== 'production') indexTemplate = fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf8');
-  const c = content.get();
+  const c = siteData();
   const json = JSON.stringify(c).replace(/</g, String.fromCharCode(92) + 'u003c'); // "<" escapado: un texto no puede cerrar el <script>
   const title = pageTitle ? `${pageTitle} · ${c.ES.brand.name}` : c.seo.title;
   return indexTemplate

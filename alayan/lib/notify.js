@@ -15,13 +15,22 @@ function createNotifier({ content, mailer, payments, baseUrl, notifyEmail }) {
   const langOf = b => (b.lang === 'EN' ? 'EN' : 'ES');
   const money = (n, L) => new Intl.NumberFormat(L === 'EN' ? 'en-GB' : 'es-ES', { style: 'currency', currency: 'EUR' }).format(n);
 
+  // Extras pedidos (sillas, movilidad reducida…) en el idioma de la reserva
+  function extrasText(b, t) {
+    let e = {};
+    try { e = JSON.parse(b.extras || '{}') || {}; } catch {}
+    return Object.keys(t.booking.extras).filter(k => e[k])
+      .map(k => (k === 'other' && e.otherText ? `${t.booking.extras[k]}: ${e.otherText}` : t.booking.extras[k])).join(', ');
+  }
+
   function summary(b, t) {
     const p = t.payment;
     return [
       `• ${p.route}: ${b.origin} → ${b.destination}`,
       `• ${p.when}: ${b.date} · ${b.time}`,
       `• ${p.pax}: ${b.pax} · ${p.luggage}: ${b.luggage}`,
-      b.flight ? `• ${p.flight}: ${b.flight}` : null
+      b.flight ? `• ${p.flight}: ${b.flight}` : null,
+      extrasText(b, t) ? `• ${t.booking.extrasTitle.toLowerCase()}: ${extrasText(b, t)}` : null
     ].filter(Boolean).join('\n');
   }
 
@@ -56,9 +65,10 @@ function createNotifier({ content, mailer, payments, baseUrl, notifyEmail }) {
 
   // ---------- Eventos ----------
   async function bookingReceived(b) {
-    await emailClient('received', b);
-    await emailAdmin(`Nueva solicitud #${b.id}: ${b.origin} → ${b.destination} (${b.date} ${b.time})`, [
-      `Nueva solicitud de reserva #${b.id}`, '',
+    // Con precio automático el cliente recibe ya el presupuesto con el enlace de pago
+    await emailClient(b.pay_token ? 'quote' : 'received', b);
+    await emailAdmin(`${b.pay_token ? 'Nueva reserva' : 'Nueva solicitud'} #${b.id}: ${b.origin} → ${b.destination} (${b.date} ${b.time})`, [
+      `${b.pay_token ? "Nueva reserva con precio automático" : "Nueva solicitud de reserva"} #${b.id}`, '',
       `Cliente: ${b.name}${b.company ? ` (${b.company})` : ''}`,
       `Teléfono: ${b.phone}`, `Email: ${b.email}`, '',
       `Trayecto: ${b.origin} → ${b.destination}`,
@@ -66,8 +76,11 @@ function createNotifier({ content, mailer, payments, baseUrl, notifyEmail }) {
       `Pasajeros: ${b.pax} · Maletas: ${b.luggage}`,
       b.flight && `Vuelo: ${b.flight}`,
       b.sign && `Cartel: ${b.sign}`,
+      extrasText(b, content.get().ES) && `Extras: ${extrasText(b, content.get().ES)}`,
       `Idioma: ${langOf(b)}`, '',
-      `Ponle precio y envía el presupuesto: ${baseUrl}/reservas`
+      b.pay_token
+        ? `Precio automático: ${money(b.amount_eur, 'ES')} (${b.tariff === 'T2' ? 'Tarifa 2' : 'Tarifa 1'}). El cliente ya tiene el enlace de pago. Panel: ${baseUrl}/reservas`
+        : `Ponle precio y envía el presupuesto: ${baseUrl}/reservas`
     ], b);
   }
 

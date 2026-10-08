@@ -62,7 +62,7 @@ function Notice({ L, v, owner, email, q }) {
       <P>Los textos, fotografías, logotipos, diseño y código de esta web son titularidad de {owner} o se usan con autorización de sus titulares. No está permitida su reproducción, distribución o transformación sin autorización expresa, salvo para uso personal y privado.</P>
 
       <H2>4. Responsabilidad</H2>
-      <P>Procuramos que la información publicada sea correcta y esté actualizada, pero puede contener errores puntuales. Los precios mostrados son orientativos («desde») y el precio definitivo de cada servicio se confirma antes del pago. No respondemos de daños derivados de interrupciones técnicas ajenas a nuestro control ni del uso indebido de la web.</P>
+      <P>Procuramos que la información publicada sea correcta y esté actualizada, pero puede contener errores puntuales. Los precios de las tarifas publicadas son finales (IVA incluido) para los trayectos que describen; el resto de servicios se presupuestan y su precio se confirma antes del pago. No respondemos de daños derivados de interrupciones técnicas ajenas a nuestro control ni del uso indebido de la web.</P>
       <P>Los enlaces a sitios de terceros (por ejemplo, WhatsApp o la pasarela de pago SumUp) se rigen por las condiciones de esos terceros.</P>
 
       <H2>5. Legislación aplicable</H2>
@@ -86,11 +86,12 @@ function Privacy({ L, v, owner, email, q }) {
 
       <H2>2. Qué datos tratamos</H2>
       <UL items={[
-        <><b className="text-white/90">Formulario de reserva:</b> nombre y apellidos, empresa (opcional), teléfono, email, origen, destino, fecha, hora, número de pasajeros y maletas, número de vuelo, y texto del cartel de bienvenida. También guardamos la fecha y hora en que aceptas esta política.</>,
+        <><b className="text-white/90">Formulario de reserva:</b> nombre y apellidos, empresa (opcional), teléfono, email, origen, destino, fecha, hora, número de pasajeros y maletas, número de vuelo, texto del cartel de bienvenida y los extras que pidas (sillas infantiles u otras necesidades que nos indiques). También guardamos la fecha y hora en que aceptas esta política.</>,
         <><b className="text-white/90">Pago:</b> lo gestiona SumUp en su propia página. Nosotros no vemos ni guardamos los datos de tu tarjeta; solo recibimos si el pago se ha completado.</>,
         <><b className="text-white/90">WhatsApp:</b> si nos escribes por WhatsApp, tratamos tu número y el contenido de la conversación para atenderte.</>,
         <><b className="text-white/90">Datos técnicos:</b> nuestros servidores registran la dirección IP y datos básicos de cada petición para garantizar la seguridad y evitar abusos (por ejemplo, envíos masivos del formulario).</>
       ]} />
+      <P><b className="text-white/90">Movilidad reducida:</b> si marcas la opción «Movilidad reducida», ese dato puede revelar información sobre la salud de un pasajero. Solo lo usamos para asignar un vehículo y una asistencia adecuados, y lo tratamos porque nos das tu consentimiento explícito al marcarlo (art. 9.2.a RGPD). Es voluntario: si no lo marcas, no podremos adaptar el servicio. Puedes retirar el consentimiento escribiéndonos, sin que afecte a lo ya tratado.</P>
       <P>Si reservas para otras personas (por ejemplo, el nombre del cartel), garantizas que les has informado y que puedes facilitarnos sus datos.</P>
 
       <H2>3. Para qué los usamos y con qué base legal</H2>
@@ -196,25 +197,25 @@ function Terms({ owner, email, q, content }) {
       <P>El servicio lo presta {owner}, con los datos identificativos y la autorización de transporte que figuran en el <A href={`/aviso-legal${q}`}>aviso legal</A>. Contacto: {email}.</P>
 
       <H2>2. Servicio</H2>
-      <P>Transporte privado de viajeros en vehículo con conductor, de un origen a un destino en la fecha y hora indicadas (aeropuertos, estaciones, hoteles, eventos, viajes por Andalucía y Portugal) o a disposición por horas, según lo que se acuerde en cada reserva.</P>
+      <P>Transporte privado de viajeros en vehículo con conductor, de un origen a un destino en la fecha y hora indicadas (aeropuertos, estaciones, hoteles, eventos, traslados por toda Andalucía) o a disposición por horas, según lo que se acuerde en cada reserva.</P>
 
       <H2>3. Cómo se contrata</H2>
       <UL items={[
-        'Rellenas el formulario de reserva con los datos del trayecto. El envío es una solicitud: todavía no es una reserva confirmada ni genera ningún cargo.',
-        'Revisamos la disponibilidad y te enviamos por WhatsApp o email el precio cerrado del servicio junto con un enlace personal a esta web. En esa página verás el resumen de la reserva y el precio con IVA, y deberás aceptar el precio y estas condiciones antes de pagar.',
+        'Trayectos con tarifa publicada (aeropuerto ↔ ciudad y pueblos y ciudades de la tabla): el formulario te muestra el precio final antes de enviarlo. Al pulsar «Reservar y pagar» se registra la reserva y pasas directamente a la página de pago con el resumen y el precio con IVA, donde deberás aceptar estas condiciones antes de pagar.',
+        'Otros trayectos: el envío del formulario es una solicitud de presupuesto; todavía no es una reserva confirmada ni genera ningún cargo. Revisamos la disponibilidad y te enviamos por WhatsApp o email el precio cerrado junto con un enlace personal a esta web, donde verás el resumen y deberás aceptar el precio y estas condiciones antes de pagar.',
         'Al pulsar «Pagar» se te redirige a la pasarela segura de SumUp. La reserva queda confirmada y el contrato celebrado cuando el pago se completa; la misma página de la reserva te lo mostrará y te enviaremos la confirmación por WhatsApp o email.',
         'Antes de pagar puedes corregir cualquier dato respondiendo a nuestro mensaje. La reserva queda registrada en nuestro sistema y puedes consultarla en tu enlace personal o pedirnos una copia en cualquier momento.',
         'El contrato puede formalizarse en español o en inglés.'
       ]} />
 
       <H2>4. Precio y pago</H2>
-      <P>Los precios publicados en la web son orientativos («desde») e incluyen el IVA. El precio de cada servicio es cerrado y se comunica antes del pago. Cualquier suplemento no incluido (por ejemplo, esperas adicionales a las incluidas o paradas no previstas) se te informará y deberás aceptarlo antes de realizarse.</P>
+      <P>Todos los precios incluyen el IVA y los peajes, y son por trayecto de solo ida. Los trayectos con tarifa publicada tienen el precio que figura en la web en el momento de reservar: precio fijo entre el aeropuerto y la ciudad según el número de pasajeros, y precio por kilómetro para los pueblos y ciudades de la tabla, con la Tarifa 2 (sábados, domingos, festivos y horario nocturno) cuando corresponda según la fecha y hora del servicio. Las sillas infantiles y alzadores tienen el precio por unidad indicado en el formulario. El resto de servicios tienen un precio cerrado que se comunica antes del pago. Cualquier suplemento no incluido (por ejemplo, esperas adicionales a las incluidas o paradas no previstas) se te informará y deberás aceptarlo antes de realizarse.</P>
       <P>El pago se realiza con tarjeta a través de la pasarela segura de SumUp. No almacenamos los datos de tu tarjeta. Emitimos factura del servicio.</P>
 
       <H2>5. Cancelaciones y cambios</H2>
       <P>{cancel}</P>
       <P>Para cancelar o modificar una reserva escríbenos por WhatsApp o a {email}; se tomará como referencia la hora de recepción de tu mensaje. Los reembolsos que correspondan se realizarán por el mismo medio de pago en un plazo máximo de 14 días naturales.</P>
-      <P>Si nosotros tuviéramos que cancelar el servicio, te devolveremos íntegramente el importe pagado.</P>
+      <P>Si nosotros tuviéramos que cancelar el servicio, o si tras pagar una reserva con tarifa publicada no tuviéramos disponibilidad para la fecha y hora elegidas, te avisaremos lo antes posible y te devolveremos íntegramente el importe pagado.</P>
 
       <H2>6. Derecho de desistimiento</H2>
       <P>De acuerdo con el artículo 103.l) del Real Decreto Legislativo 1/2007 (Ley General para la Defensa de los Consumidores y Usuarios), el derecho de desistimiento de 14 días no se aplica a los servicios de transporte con una fecha o periodo de ejecución específicos. Se aplica la política de cancelación del apartado anterior.</P>

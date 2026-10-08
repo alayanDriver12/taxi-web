@@ -64,6 +64,14 @@ td.cobro{min-width:250px}
 </form></dialog>
 <script src="/panel/panel.js"></script>
 <script>
+// Tipo de reserva y extras pedidos (sillas, movilidad reducida…)
+const MODE_LABELS = { airport: 'Precio fijo aeropuerto', route: 'Tabla de destinos', custom: 'A presupuesto' };
+const EXTRA_LABELS = { booster: 'Alzador', baby: 'Silla de bebé', child: 'Silla de niño', pmr: 'Movilidad reducida', other: 'Otros' };
+function extrasText(r) {
+  let e = {};
+  try { e = JSON.parse(r.extras || '{}') || {}; } catch {}
+  return Object.keys(EXTRA_LABELS).filter(k => e[k]).map(k => (k === 'other' && e.otherText ? 'Otros: ' + e.otherText : EXTRA_LABELS[k])).join(', ');
+}
 const STATUSES = ['pendiente', 'pagada', 'confirmada', 'cancelada'];
 const PAY_LABELS = { sin_pago: 'sin presupuesto', enlace_enviado: 'presupuesto enviado', pagado: 'pagado', fallido: 'pago fallido' };
 const ATTEMPT_LABELS = { PENDING: 'en curso', PAID: 'pagado', FAILED: 'rechazado', EXPIRED: 'caducado' };
@@ -124,9 +132,9 @@ function render() {
   $('rows').innerHTML = rows.map(r => `<tr class="${r.date < today() ? 'past' : ''}">
     <td>${r.id}<br><small>${utc(r.created_at)}</small></td>
     <td><b>${esc(r.name)}</b>${r.company ? '<br>' + esc(r.company) : ''}<br><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a><br><small>${esc(r.email)}</small></td>
-    <td>${esc(r.origin)}<br>→ ${esc(r.destination)}</td>
+    <td>${esc(r.origin)}<br>→ ${esc(r.destination)}<br><small>${MODE_LABELS[r.route_mode] || ''}${r.tariff ? ' · ' + (r.tariff === 'T2' ? 'Tarifa 2' : 'Tarifa 1') : ''}</small></td>
     <td><b>${esc(r.date)}</b><br>${esc(r.time)}</td>
-    <td>${r.pax} pax · ${r.luggage} maletas${r.flight ? '<br>✈ ' + esc(r.flight) : ''}${r.sign ? '<br>🪧 ' + esc(r.sign) : ''}</td>
+    <td>${r.pax} pax · ${r.luggage} maletas${r.flight ? '<br>✈ ' + esc(r.flight) : ''}${r.sign ? '<br>🪧 ' + esc(r.sign) : ''}${extrasText(r) ? '<br>➕ ' + esc(extrasText(r)) : ''}</td>
     <td>
       <select data-id="${r.id}" data-field="status">${STATUSES.map(s => `<option ${s === r.status ? 'selected' : ''}>${s}</option>`).join('')}</select>
       <input data-id="${r.id}" data-field="notes" placeholder="Notas internas" value="${esc(r.notes)}" style="margin-top:6px">

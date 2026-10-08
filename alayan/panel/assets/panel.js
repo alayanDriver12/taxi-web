@@ -34,6 +34,8 @@ async function initPanel(active) {
   const links = [
     ['reservas', '/reservas', 'Reservas', ['admin', 'gestor']],
     ['web', '/admin', 'Contenido web', ['admin']],
+    ['tarifas', '/admin/tarifas', 'Tarifas', ['admin']],
+    ['flota', '/admin/flota', 'Flota', ['admin']],
     ['usuarios', '/admin/usuarios', 'Usuarios', ['admin']]
   ].filter(l => l[3].includes(me.role));
 

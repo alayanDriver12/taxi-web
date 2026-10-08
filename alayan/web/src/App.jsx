@@ -1,19 +1,10 @@
 import { useEffect, useState } from 'react';
-import { sendBooking } from './booking.js';
 import Legal, { LEGAL_PATHS } from './Legal.jsx';
 import Pay, { payTokenFromPath } from './Pay.jsx';
+import Fleet from './Fleet.jsx';
+import BookingForm from './BookingForm.jsx';
+import { FixedRates, KmRates, PriceTable, Coverage } from './Rates.jsx';
 import { fill, withLang } from './util.js';
-
-const EMPTY_FORM = {
-  name: '', company: '', phone: '', email: '', origin: '', destination: '',
-  date: '', time: '', pax: '2', luggage: '2', flight: '', sign: ''
-};
-const FORM_FIELDS = [
-  ['name'], ['company'], ['phone'], ['email'], ['origin'], ['destination'],
-  ['date', 'date'], ['time', 'time'], ['pax'], ['luggage'], ['flight'], ['sign']
-];
-const REQUIRED = ['name', 'phone', 'email', 'origin', 'destination', 'date', 'time'];
-const WIDE_FIELDS = new Set(['origin', 'destination', 'flight', 'sign']);
 
 // Idioma inicial: ?lang=en. En la página de pago, si no viene, se usa el del navegador.
 function initialLang() {
@@ -24,11 +15,7 @@ function initialLang() {
 
 export default function App({ content }) {
   const [lang, setLang] = useState(initialLang);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [accepted, setAccepted] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [sentId, setSentId] = useState(null);
-  const [formError, setFormError] = useState('');
+  const [preset, setPreset] = useState(null);
   const t = content[lang];
   const img = content.images;
   const waBase = `https://wa.me/${content.contact.whatsapp}`;
@@ -77,20 +64,13 @@ export default function App({ content }) {
     );
   }
 
-  async function send() {
-    setFormError('');
-    if (REQUIRED.some(k => !String(form[k]).trim())) return setFormError(t.booking.missing);
-    if (!accepted) return setFormError(t.booking.mustAccept);
-    setSending(true);
-    try {
-      const { id } = await sendBooking({ ...form, privacy: true, lang });
-      setSentId(id);
-    } catch (e) {
-      setFormError(e.message || t.booking.error);
-    } finally {
-      setSending(false);
-    }
-  }
+  // «Reservar» desde las tarifas: rellena el formulario y baja hasta él
+  const book = p => {
+    setPreset({ ...p, at: Date.now() });
+    document.getElementById('reserva')?.scrollIntoView({ behavior: 'smooth' });
+  };
+  const pricing = content.pricing;
+  const fleetThumbs = content.fleet.map(c => c.images[0]).filter(Boolean).slice(0, 2);
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#F7F3ED] antialiased selection:bg-[#C5A46A]/30">
@@ -107,6 +87,7 @@ export default function App({ content }) {
           </div>
           <nav className="hidden xl:flex items-center gap-8 text-[11px] tracking-[0.18em] text-white/60">
             <a href="#flota" className="hover:text-white transition">{t.nav.fleet}</a>
+            <a href="#tarifas" className="hover:text-white transition">{t.nav.rates}</a>
             <a href="#clases" className="hover:text-white transition">{t.nav.classes}</a>
             <a href="#conductores" className="hover:text-white transition">{t.nav.drivers}</a>
             <a href="#destinos" className="hover:text-white transition">{t.nav.destinations}</a>
@@ -177,47 +158,7 @@ export default function App({ content }) {
         </div>
       </section>
 
-      {/* Flota */}
-      <section id="flota" className="bg-[#0A0A0A] border-t border-white/5">
-        <div className="mx-auto max-w-[1440px] px-6 md:px-10 py-16 md:py-24">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
-            <h2 className="serif text-[32px] md:text-[48px] leading-none max-w-[560px]">
-              {t.fleet.title}
-              <br />
-              <span className="text-white/40">{t.slogans.left} {t.slogans.right}</span>
-            </h2>
-            <p className="text-[13px] leading-relaxed text-white/50 max-w-[420px]">{t.fleet.subtitle} — {t.slogans.hybrid}</p>
-          </div>
-          <div className="grid md:grid-cols-2 gap-6 md:gap-8">
-            <div className="group relative overflow-hidden rounded-[28px] bg-[#111] border border-white/10">
-              <img src={img.ford} alt={t.fleet.ford.name} className="w-full h-[360px] md:h-[460px] object-cover group-hover:scale-[1.02] transition duration-700" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-              <div className="absolute bottom-0 p-7 md:p-8">
-                <div className="inline-flex px-3 py-1 rounded-full bg-[#C5A46A] text-black text-[10px] tracking-[0.2em] font-semibold mb-3">{t.fleet.ford.plate}</div>
-                <div className="serif text-[28px] leading-none">{t.fleet.ford.name}</div>
-                <div className="text-[13px] text-white/60 mt-2 max-w-[380px]">{t.fleet.ford.desc}</div>
-              </div>
-            </div>
-            <div className="group relative overflow-hidden rounded-[28px] bg-[#111] border border-white/10">
-              <img src={img.tesla} alt={t.fleet.tesla.name} className="w-full h-[360px] md:h-[460px] object-cover group-hover:scale-[1.02] transition duration-700" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-              <div className="absolute bottom-0 p-7 md:p-8">
-                <div className="inline-flex px-3 py-1 rounded-full bg-white text-black text-[10px] tracking-[0.2em] font-semibold mb-3">{t.fleet.tesla.plate}</div>
-                <div className="serif text-[28px] leading-none">{t.fleet.tesla.name}</div>
-                <div className="text-[13px] text-white/60 mt-2 max-w-[380px]">{t.fleet.tesla.desc}</div>
-              </div>
-              {t.fleet.tesla.badge && (
-                <div className="absolute top-6 right-6 px-3 py-1.5 rounded-full bg-black/60 border border-white/10 text-[10px] tracking-[0.2em] text-white/80">{t.fleet.tesla.badge}</div>
-              )}
-            </div>
-          </div>
-          <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-3">
-            {t.slogans.items.map((item, i) => (
-              <div key={i} className="h-[56px] rounded-full border border-white/10 bg-white/[0.03] grid place-items-center text-[11px] tracking-[0.3em] text-white/70">{item}</div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <Fleet t={t} cars={content.fleet} lang={lang} />
 
       {/* Clases */}
       <section id="clases" className="bg-[#F7F3ED] text-black">
@@ -257,6 +198,11 @@ export default function App({ content }) {
           {t.classes.vatNote && <p className="mt-6 text-[12px] text-black/50">{t.classes.vatNote}</p>}
         </div>
       </section>
+
+      {/* Tarifas */}
+      <FixedRates t={t} p={pricing} lang={lang} onBook={book} />
+      <KmRates t={t} p={pricing} lang={lang} waBase={waBase} />
+      <PriceTable t={t} p={pricing} lang={lang} onBook={book} />
 
       {/* Conductores */}
       <section id="conductores" className="bg-[#0A0A0A] border-t border-white/5">
@@ -304,6 +250,8 @@ export default function App({ content }) {
         </div>
       </section>
 
+      <Coverage t={t} p={pricing} waBase={waBase} />
+
       {/* Servicios */}
       <section id="servicios" className="bg-[#F7F3ED] text-black">
         <div className="mx-auto max-w-[1440px] px-6 md:px-10 py-20 md:py-24">
@@ -334,8 +282,7 @@ export default function App({ content }) {
               <div className="mt-6 text-[11px] leading-relaxed text-white/40">{t.booking.cancel}</div>
             </div>
             <div className="mt-8 flex gap-3">
-              <img src={img.ford} className="h-16 w-24 object-cover rounded-xl border border-white/10" alt="" />
-              <img src={img.tesla} className="h-16 w-24 object-cover rounded-xl border border-white/10" alt="" />
+              {fleetThumbs.map(src => <img key={src} src={src} className="h-16 w-24 object-cover rounded-xl border border-white/10" alt="" />)}
               <div className="text-[11px] text-white/50 leading-relaxed">
                 {t.booking.fleetNote}
                 <br />
@@ -344,72 +291,7 @@ export default function App({ content }) {
             </div>
           </div>
           <div className="rounded-[28px] bg-[#F7F3ED] text-black p-6 md:p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
-            {sentId ? (
-              <div className="py-10 text-center" role="status">
-                <div className="mx-auto h-14 w-14 rounded-full bg-[#C5A46A] grid place-items-center text-[24px]">✓</div>
-                <p className="mt-6 serif text-[30px] leading-tight max-w-[440px] mx-auto">{fill(t.booking.sent, { id: sentId })}</p>
-                <a
-                  href={`${waBase}?text=${encodeURIComponent(fill(t.booking.whatsappMessage, form))}`}
-                  target="_blank"
-                  rel="noopener"
-                  className="mt-8 inline-flex h-11 px-6 items-center rounded-full border border-black/15 text-[11px] tracking-[0.16em] font-semibold hover:bg-black/5 transition"
-                >
-                  {t.booking.whatsapp.toUpperCase()}
-                </a>
-              </div>
-            ) : (
-              <>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {FORM_FIELDS.map(([key, type]) => (
-                    <div key={key} className={WIDE_FIELDS.has(key) ? 'md:col-span-2' : ''}>
-                      <label className="text-[11px] tracking-[0.18em] text-black/60">{t.booking.fields[key]}</label>
-                      <input
-                        type={type || 'text'}
-                        value={form[key]}
-                        onChange={e => setForm({ ...form, [key]: e.target.value })}
-                        className="mt-1.5 w-full h-11 px-4 rounded-full bg-white border border-black/10 text-[14px] outline-none focus:border-[#C5A46A] focus:ring-2 focus:ring-[#C5A46A]/20"
-                        placeholder={key === 'sign' ? t.booking.placeholders.sign : ''}
-                      />
-                    </div>
-                  ))}
-                </div>
-                {/* Aceptación de privacidad y condiciones + información básica (primera capa, art. 13 RGPD) */}
-                <label className="mt-6 flex gap-3 items-start text-[12px] leading-relaxed text-black/70 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={accepted}
-                    onChange={e => setAccepted(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 shrink-0 accent-[#C5A46A]"
-                  />
-                  <span>
-                    {t.booking.acceptPrefix}{' '}
-                    <a href={withLang('/privacidad', lang)} target="_blank" className="underline hover:text-black">{t.footer.legal.privacy.toLowerCase()}</a>{' '}
-                    {t.booking.acceptJoin}{' '}
-                    <a href={withLang('/condiciones', lang)} target="_blank" className="underline hover:text-black">{t.footer.legal.terms.toLowerCase()}</a>.
-                  </span>
-                </label>
-                <p className="mt-3 text-[11px] leading-relaxed text-black/45">{fill(t.booking.privacyInfo, { owner: content.legal.owner || t.brand.name })}</p>
-                {formError && <p className="mt-4 rounded-[14px] bg-[#6b2222]/10 border border-[#6b2222]/30 px-4 py-3 text-[13px] text-[#6b2222]" role="alert">{formError}</p>}
-                <div className="mt-6 grid sm:grid-cols-2 gap-3">
-                  <button
-                    onClick={send}
-                    disabled={sending}
-                    className="h-12 px-4 rounded-full bg-[#0A0A0A] text-white text-[11px] md:text-[12px] tracking-[0.16em] font-semibold flex items-center justify-center text-center leading-tight hover:bg-black transition disabled:opacity-60"
-                  >
-                    {sending ? '…' : t.booking.pay.toUpperCase()}
-                  </button>
-                  <a
-                    href={`${waBase}?text=${encodeURIComponent(fill(t.booking.whatsappMessage, form))}`}
-                    target="_blank"
-                    rel="noopener"
-                    className="h-12 px-4 rounded-full border border-black/15 flex items-center justify-center text-center leading-tight text-[11px] md:text-[12px] tracking-[0.14em] font-semibold hover:bg-black/5 transition"
-                  >
-                    {t.booking.whatsapp.toUpperCase()}
-                  </a>
-                </div>
-                <div className="mt-4 text-center text-[11px] tracking-wide text-black/50">{t.booking.secure}</div>
-              </>
-            )}
+            <BookingForm t={t} p={pricing} lang={lang} waBase={waBase} owner={content.legal.owner} preset={preset} />
           </div>
         </div>
       </section>

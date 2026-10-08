@@ -64,11 +64,11 @@ const $ = id => document.getElementById(id);
 
 const SECTION_NAMES = {
   legal: 'Datos legales', general: 'General y SEO', images: 'Imágenes', backup: 'Copias de seguridad',
-  brand: 'Marca', nav: 'Menú', hero: 'Portada', exp: 'Experiencia', slogans: 'Lemas', fleet: 'Flota',
+  brand: 'Marca', nav: 'Menú', hero: 'Portada', exp: 'Experiencia', slogans: 'Lemas', fleet: 'Flota (títulos)', rates: 'Tarifas (textos)',
   classes: 'Clases y precios', drivers: 'Conductores', destinations: 'Destinos', services: 'Servicios',
   booking: 'Reserva', payment: 'Página de pago', notify: 'Avisos al cliente', footer: 'Pie de página'
 };
-const IMAGE_NAMES = { logo: 'Logo', hero: 'Portada (imagen principal)', ford: 'Coche 1 (Ford)', tesla: 'Coche 2 (Tesla)' };
+const IMAGE_NAMES = { logo: 'Logo', hero: 'Portada (imagen principal)' }; // fotos de los coches: en «Flota»
 
 const KEY_LABELS = {
   name: 'Nombre', tagline: 'Subtítulo', fleet: 'Flota', classes: 'Clases', drivers: 'Conductores', destinations: 'Destinos',
@@ -93,7 +93,18 @@ const KEY_LABELS = {
   redirecting: 'Texto mientras abre SumUp', checking: 'Texto mientras comprueba el pago', paidTitle: 'Título si ya está pagada',
   paidText: 'Texto si ya está pagada', failed: 'Aviso de pago fallido', noPrice: 'Aviso si aún no hay precio',
   cancelled: 'Aviso si está cancelada', past: 'Aviso si la fecha ya pasó', notFound: 'Aviso si el enlace no existe',
-  unavailable: 'Aviso si el pago online no está disponible', help: 'Enlace de ayuda'
+  unavailable: 'Aviso si el pago online no está disponible', help: 'Enlace de ayuda',
+  rates: 'Tarifas', fixedKicker: 'Antetítulo tarifas fijas', fixedTitle: 'Título tarifas fijas', fixedAccent: 'Título (parte destacada)',
+  fixedSubtitle: 'Subtítulo tarifas fijas', smallTitle: 'Tarjeta 1: título', smallPoints: 'Tarjeta 1: puntos', largeTitle: 'Tarjeta 2: título',
+  largePoints: 'Tarjeta 2: puntos', direct: 'Texto «directo»', kmKicker: 'Antetítulo precio por km', kmSubtitle: 'Subtítulo precio por km',
+  kmNote: 'Nota del precio por km', kmExamples: 'Destinos de ejemplo', kmCardTitle: 'Tarjeta km: título', kmCardAccent: 'Tarjeta km: destacado',
+  kmCardText: 'Tarjeta km: texto', tableKicker: 'Antetítulo tabla', tableTitle: 'Título tabla', tableSubtitle: 'Subtítulo tabla',
+  search: 'Buscador (texto de ejemplo)', all: 'Filtro «todos»', towns: 'Filtro «pueblos»', cities: 'Filtro «ciudades»',
+  t1: 'Nombre Tarifa 1', t2: 'Nombre Tarifa 2', empty: 'Aviso si no hay resultados', choose: 'Botón elegir',
+  modes: 'Pestañas', directions: 'Sentidos', airport: 'Aeropuerto', route: 'Pueblos y ciudades', custom: 'Otro trayecto',
+  toCity: 'Aeropuerto → ciudad', toAirport: 'Ciudad → aeropuerto', fromSevilla: 'Desde Sevilla', toSevilla: 'Hacia Sevilla',
+  place: 'Pueblo o ciudad', address: 'Dirección', addressDest: 'Dirección en destino', other: 'Otros',
+  extras: 'Extras', booster: 'Alzador', baby: 'Silla de bebé', child: 'Silla de niño', pmr: 'Movilidad reducida', request: 'Botón presupuesto', coverageTitle: 'Cobertura: título', coverageAccent: 'Cobertura: destacado', coverageSubtitle: 'Cobertura: subtítulo', airports: 'Etiqueta aeropuertos', ports: 'Etiqueta puertos', coverageCta: 'Cobertura: botón', coverageMessage: 'Cobertura: mensaje de WhatsApp'
 };
 const LEGAL_FIELDS = [
   ['owner', 'Titular', 'Nombre y apellidos si es autónomo, o razón social si es sociedad (ej: Alayan Driver S.L.).'],
@@ -112,15 +123,19 @@ const PATH_LABELS = {
   'notify.received.subject': 'Asunto', 'notify.quote.subject': 'Asunto', 'notify.paid.subject': 'Asunto',
   'notify.confirmed.subject': 'Asunto', 'notify.cancelled.subject': 'Asunto',
   'notify.received.body': 'Texto', 'notify.quote.body': 'Texto', 'notify.paid.body': 'Texto',
-  'notify.confirmed.body': 'Texto', 'notify.cancelled.body': 'Texto', 'booking.pay': 'Botón enviar solicitud', 'payment.pay': 'Botón pagar', 'payment.acceptPrefix': 'Casilla: texto inicial', 'payment.title': 'Título', 'payment.pax': 'Etiqueta «pasajeros»', 'payment.luggage': 'Etiqueta «maletas»', 'payment.flight': 'Etiqueta «vuelo»', 'hero.badge': 'Etiqueta sobre la portada',
-  'fleet.ford': 'Coche 1 (imagen «Coche 1»)', 'fleet.tesla': 'Coche 2 (imagen «Coche 2»)', 'fleet.tesla.badge': 'Etiqueta en la esquina',
+  'notify.confirmed.body': 'Texto', 'notify.cancelled.body': 'Texto', 'booking.pay': 'Botón reservar y pagar', 'booking.request': 'Botón solicitar presupuesto', 'booking.modes': 'Pestañas del formulario', 'booking.directions': 'Sentidos del trayecto', 'booking.extras': 'Extras', 'booking.extrasTitle': 'Título de los extras', 'booking.extrasIncluded': 'Nota de extras incluidos', 'booking.pmrNote': 'Aviso de movilidad reducida', 'booking.totalNote': 'Nota bajo el total', 'booking.tariff1': 'Nombre Tarifa 1', 'booking.tariff2': 'Nombre Tarifa 2', 'booking.quoteLabel': 'Total cuando va a presupuesto', 'booking.quoteNote': 'Nota cuando va a presupuesto', 'booking.noPlace': 'Aviso si no ha elegido destino', 'rates.t1Note': 'Explicación Tarifa 1', 'rates.t2Note': 'Explicación Tarifa 2', 'payment.pay': 'Botón pagar', 'payment.acceptPrefix': 'Casilla: texto inicial', 'payment.title': 'Título', 'payment.pax': 'Etiqueta «pasajeros»', 'payment.luggage': 'Etiqueta «maletas»', 'payment.flight': 'Etiqueta «vuelo»', 'hero.badge': 'Etiqueta sobre la portada',
   'slogans.items': 'Etiquetas bajo la flota', 'classes.popular': 'Etiqueta «más reservado»',
   'classes.book': 'Texto del botón (va seguido del nombre de la clase)', 'classes.cards[].popular': 'Destacada (fondo negro y etiqueta)',
   'services.items': 'Servicios', 'footer.services': 'Lista de servicios', 'footer.tagline': 'Frase inicial'
 };
 const HINTS = {
   'hero.badge': 'Vacío = no se muestra.',
-  'fleet.tesla.badge': 'Vacío = no se muestra.',
+  'fleet.title': 'Los coches, sus textos y sus fotos se editan en «Flota» (menú de arriba).',
+  'rates.kmNote': 'Se rellena con las tarifas: {minimum} mínimo, {supplement} suplemento, {km} km, {pct} % de la Tarifa 2, {start} y {end} horario nocturno.',
+  'rates.kmExamples': 'Nombres de destinos de la tabla (tal cual están en «Tarifas») que salen como ejemplo.',
+  'booking.pay': '{amount} se sustituye por el precio.',
+  'booking.extrasIncluded': '{amount} se sustituye por lo que suman los extras. Los precios se cambian en «Tarifas».',
+  'booking.pmrNote': '{max} se sustituye por el máximo de pasajeros con movilidad reducida.',
   'footer.bottomLeft': 'Vacío = no se muestra.',
   'footer.rights': '{year} se sustituye por el año actual.',
   'booking.whatsappMessage': 'Se rellena con lo que escriba el cliente: {origin} {destination} {date} {time} {pax} {luggage} {flight} {sign}',

@@ -25,6 +25,8 @@ dist/                web compilada (npm run build, no se sube al repo)
 | `/login` | — | Entrar con usuario y contraseña |
 | `/reservas` | admin y gestor | Reservas: precio, presupuesto con enlace de pago, WhatsApp, estado, historial de pagos, CSV |
 | `/admin` | admin | Contenido de la web: textos ES/EN, WhatsApp, SEO, imágenes |
+| `/admin/tarifas` | admin | Precio fijo aeropuerto, € por km, mínimo, suplemento, Tarifa 2, festivos, extras, tabla de pueblos y ciudades, cobertura |
+| `/admin/flota` | admin | Vehículos (textos ES/EN y orden) y sus fotos del carrusel (hasta 15 por coche) |
 | `/admin/usuarios` | admin | Alta, baja, roles y contraseñas |
 
 `ADMIN_USER` / `ADMIN_PASS` solo se usan **la primera vez** (con la tabla de usuarios vacía) para crear el
@@ -50,8 +52,15 @@ El `Dockerfile` instala dependencias, compila la web y arranca el servidor.
    `SUMUP_API_KEY`, `SUMUP_MERCHANT_CODE`, `DB_PATH=/data/alayan.db`. En staging, sin claves: `SUMUP_MOCK=true`.
 
 ## Flujo de reserva y cobro (SumUp)
-No hay precios fijos, así que el cliente **solicita** y paga después, cuando el precio está cerrado:
-1. El cliente envía el formulario («Solicitar reserva») → reserva `pendiente`, sin precio.
+El formulario tiene tres modos (`route_mode`):
+- **Aeropuerto ↔ Sevilla** (`airport`): precio fijo según pasajeros. **Pueblos y ciudades** (`route`): precio por km
+  de la tabla, con Tarifa 2 (sábados, domingos, festivos y noche). Ambos **pagan al momento**: el servidor calcula
+  el precio (`lib/pricing.js`, nunca se usa el que manda el navegador), crea la reserva con `amount_eur`, `tariff` y
+  su enlace `/pago/<token>`, y el cliente pasa directo a pagar (pasos 3-4).
+- Sillas de bebé / niño y alzador suman su precio por unidad (en `/admin/tarifas`, sin Tarifa 2). Movilidad reducida
+  limita los pasajeros. Los extras se guardan en `extras` (JSON).
+- **Otro trayecto** (`custom`): sin precio → presupuesto manual:
+1. El cliente envía el formulario («Solicitar presupuesto») → reserva `pendiente`, sin precio.
 2. En `/reservas` pones el precio y pulsas **Enviar presupuesto** → se crea un enlace personal
    `/pago/<token>` (32 caracteres aleatorios, no caduca). **Enviar por WhatsApp** abre el chat con el mensaje listo.
 3. El cliente abre el enlace, ve el resumen y el precio con IVA, acepta las condiciones y pulsa **Pagar**.

@@ -1,0 +1,156 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Flota · Alayan</title>
+<link rel="stylesheet" href="/panel/panel.css">
+<style>
+.car{margin-bottom:16px}
+.car-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.car-head h2{margin:0}
+.langs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media (max-width:800px){.langs{grid-template-columns:1fr}}
+.langs h3{font-size:12px;letter-spacing:.15em;color:var(--gold);margin:0 0 8px}
+.langs .f{margin-bottom:10px}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:14px}
+.photo{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#000;aspect-ratio:4/3}
+.photo img{width:100%;height:100%;object-fit:cover;display:block}
+.photo .ops{position:absolute;inset:auto 0 0 0;display:flex;gap:4px;justify-content:center;padding:6px;background:linear-gradient(transparent,#000c)}
+.photo .ops button{padding:3px 8px;font-size:11px}
+.photo .first{position:absolute;top:6px;left:6px;font-size:10px;background:var(--gold);color:#000;border-radius:999px;padding:2px 7px;font-weight:600}
+.upload{display:grid;place-items:center;border:1px dashed #ffffff40;border-radius:10px;aspect-ratio:4/3;cursor:pointer;color:var(--muted);font-size:12px;text-align:center;padding:8px}
+.upload:hover{border-color:var(--gold);color:var(--text)}
+.upload input{display:none}
+.savebar{position:sticky;bottom:0;z-index:20;display:flex;gap:10px;align-items:center;justify-content:flex-end;padding:12px 20px;background:#0A0A0AF0;border-top:1px solid var(--line);margin:16px -20px -20px}
+.savebar span{margin-right:auto;color:var(--muted);font-size:12px}
+</style></head><body>
+<main>
+  <div class="head">
+    <div><h1>Flota</h1><small class="muted">Cada vehículo sale en la web con un carrusel de fotos. La primera foto es la portada.</small></div>
+    <button id="addCar">+ Añadir vehículo</button>
+  </div>
+  <div id="cars">Cargando…</div>
+  <div class="savebar"><span id="dirty"></span><button id="saveBtn">Guardar textos y orden</button></div>
+</main>
+<script src="/panel/panel.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+let fleet = [], maxImages = 15, dirty = false;
+
+const FIELDS = [['name', 'Nombre'], ['plate', 'Etiqueta (arriba del nombre)'], ['desc', 'Descripción'], ['badge', 'Distintivo (esquina, opcional)']];
+
+function markDirty(v = true) { dirty = v; $('dirty').textContent = v ? 'Hay cambios sin guardar' : ''; }
+window.addEventListener('beforeunload', e => { if (dirty) e.preventDefault(); });
+
+function render() {
+  $('cars').innerHTML = fleet.map((car, ci) => `
+    <section class="card car" data-ci="${ci}">
+      <div class="car-head">
+        <h2>${esc(car.ES.name || 'Vehículo sin nombre')}</h2>
+        <div class="row" style="margin:0">
+          <button class="ghost small" data-move="-1" ${ci === 0 ? 'disabled' : ''}>↑ Subir</button>
+          <button class="ghost small" data-move="1" ${ci === fleet.length - 1 ? 'disabled' : ''}>↓ Bajar</button>
+          <button class="danger small" data-remove>Eliminar vehículo</button>
+        </div>
+      </div>
+      <div class="langs">
+        ${['ES', 'EN'].map(L => `<div><h3>${L === 'ES' ? 'ESPAÑOL' : 'INGLÉS'}</h3>
+          ${FIELDS.map(([k, label]) => `<div class="f"><label>${label}</label>${k === 'desc'
+            ? `<textarea rows="2" data-l="${L}" data-k="${k}">${esc(car[L][k])}</textarea>`
+            : `<input data-l="${L}" data-k="${k}" value="${esc(car[L][k])}">`}</div>`).join('')}
+        </div>`).join('')}
+      </div>
+      <label style="margin-top:6px">Fotos (${car.images.length}/${maxImages}) · JPG, PNG o WebP, máx. 8 MB</label>
+      <div class="photos">
+        ${car.images.map((src, i) => `<div class="photo">
+          <img src="${esc(src)}" alt="" loading="lazy">
+          ${i === 0 ? '<span class="first">PORTADA</span>' : ''}
+          <div class="ops">
+            <button class="ghost" data-img="${i}" data-dir="-1" ${i === 0 ? 'disabled' : ''} title="Mover a la izquierda">←</button>
+            <button class="ghost" data-img="${i}" data-dir="1" ${i === car.images.length - 1 ? 'disabled' : ''} title="Mover a la derecha">→</button>
+            <button class="danger" data-img="${i}" data-del title="Quitar foto">✕</button>
+          </div></div>`).join('')}
+        ${car.images.length < maxImages ? `<label class="upload">+ Subir fotos<br>(puedes elegir varias)<input type="file" accept="image/jpeg,image/png,image/webp" multiple data-upload></label>` : ''}
+      </div>
+    </section>`).join('') || '<p class="muted">No hay vehículos. Añade uno.</p>';
+}
+
+// Guarda en el servidor (textos, orden y fotos) y repinta con lo que devuelve
+async function save(msg = 'Flota guardada. Ya está en la web.') {
+  const res = await api('/api/panel/fleet', { method: 'PUT', body: { fleet } });
+  fleet = res.fleet; maxImages = res.maxImages;
+  render(); markDirty(false);
+  if (msg) toast(msg);
+}
+
+$('cars').addEventListener('input', e => {
+  const sec = e.target.closest('[data-ci]'), { l, k } = e.target.dataset;
+  if (!sec || !l) return;
+  fleet[sec.dataset.ci][l][k] = e.target.value;
+  markDirty();
+});
+
+$('cars').addEventListener('click', async e => {
+  const b = e.target.closest('button');
+  const sec = e.target.closest('[data-ci]');
+  if (!b || !sec) return;
+  const ci = Number(sec.dataset.ci), car = fleet[ci];
+  try {
+    if (b.dataset.move) {
+      const j = ci + Number(b.dataset.move);
+      [fleet[ci], fleet[j]] = [fleet[j], fleet[ci]];
+      render(); markDirty();
+    } else if ('remove' in b.dataset) {
+      if (!confirm(`¿Eliminar «${car.ES.name || 'este vehículo'}» y todas sus fotos?`)) return;
+      fleet.splice(ci, 1);
+      await save('Vehículo eliminado.');
+    } else if (b.dataset.img !== undefined) {
+      const i = Number(b.dataset.img);
+      if ('del' in b.dataset) {
+        if (!confirm('¿Quitar esta foto? Se borra del servidor.')) return;
+        car.images.splice(i, 1);
+      } else {
+        const j = i + Number(b.dataset.dir);
+        [car.images[i], car.images[j]] = [car.images[j], car.images[i]];
+      }
+      await save('Fotos actualizadas.');
+    }
+  } catch (err) { toast(err.message, 'error'); }
+});
+
+// Subida de fotos: primero se guardan los textos pendientes (el vehículo debe existir en el servidor)
+$('cars').addEventListener('change', async e => {
+  if (!('upload' in e.target.dataset)) return;
+  const id = fleet[e.target.closest('[data-ci]').dataset.ci].id;
+  const files = [...e.target.files];
+  try {
+    if (dirty) await save(null);
+    let ok = 0;
+    for (const file of files) {
+      if (file.size > 8 * 1024 * 1024) { toast(`«${file.name}» pesa más de 8 MB.`, 'error'); continue; }
+      toast(`Subiendo ${file.name}…`);
+      const res = await api(`/api/panel/fleet/${id}/images`, { method: 'POST', file });
+      fleet = res.fleet; ok++;
+    }
+    render();
+    if (ok) toast(`${ok} foto(s) subida(s).`);
+  } catch (err) { toast(err.message, 'error'); render(); }
+});
+
+$('addCar').onclick = async () => {
+  const empty = { name: '', plate: '', desc: '', badge: '' };
+  const id = 'coche-' + Date.now().toString(36);
+  fleet.push({ id, images: [], ES: { ...empty, name: 'NUEVO VEHÍCULO' }, EN: { ...empty, name: 'NEW VEHICLE' } });
+  try { await save('Vehículo añadido. Rellena sus textos y sube fotos.'); window.scrollTo(0, document.body.scrollHeight); }
+  catch (err) { toast(err.message, 'error'); }
+};
+
+$('saveBtn').onclick = async () => {
+  $('saveBtn').disabled = true;
+  try { await save(); } catch (err) { toast(err.message, 'error'); }
+  $('saveBtn').disabled = false;
+};
+
+initPanel('flota').then(async () => {
+  const res = await api('/api/panel/fleet');
+  fleet = res.fleet; maxImages = res.maxImages;
+  render();
+}).catch(e => toast(e.message, 'error'));
+</script></body></html>

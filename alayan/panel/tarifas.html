@@ -1,0 +1,211 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Tarifas · Alayan</title>
+<link rel="stylesheet" href="/panel/panel.css">
+<style>
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-bottom:16px}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fields .full{grid-column:1/-1}
+.card p.help{font-size:12px;color:var(--muted);margin:-4px 0 12px}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--text);margin:0}
+#dest table{min-width:720px}
+#dest td{padding:6px}
+#dest td input,#dest td select{padding:5px 7px}
+#dest .price{white-space:nowrap;font-variant-numeric:tabular-nums}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.toolbar input{max-width:240px}
+.savebar{position:sticky;bottom:0;z-index:20;display:flex;gap:10px;align-items:center;justify-content:flex-end;padding:12px 20px;background:#0A0A0AF0;border-top:1px solid var(--line);margin:16px -20px -20px}
+.savebar span{margin-right:auto;color:var(--muted);font-size:12px}
+</style></head><body>
+<main>
+  <div class="head">
+    <div><h1>Tarifas</h1><small id="meta" class="muted"></small></div>
+    <button class="ghost small" id="resetBtn">Restaurar tarifas por defecto</button>
+  </div>
+
+  <div class="cols">
+    <section class="card">
+      <h2>Precio fijo aeropuerto</h2>
+      <p class="help">Trayecto aeropuerto ↔ ciudad. Se paga al reservar.</p>
+      <div class="fields">
+        <div class="full"><label>Nombre del aeropuerto</label><input data-k="airport.name"></div>
+        <div class="full"><label>Ciudad</label><input data-k="airport.city"></div>
+        <div><label>Precio hasta N pasajeros (€)</label><input type="number" step="0.01" min="1" data-k="airport.small"></div>
+        <div><label>N (pasajeros del precio pequeño)</label><input type="number" min="1" max="20" data-k="airport.smallMaxPax"></div>
+        <div><label>Precio grupos (€)</label><input type="number" step="0.01" min="1" data-k="airport.large"></div>
+        <div><label>Máximo de pasajeros</label><input type="number" min="1" max="20" data-k="maxPax"></div>
+        <div class="full"><label class="check"><input type="checkbox" data-k="airport.applyT2"> Aplicar también la Tarifa 2 al precio fijo</label></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Precio por kilómetro</h2>
+      <p class="help">Para los pueblos y ciudades de la tabla (Tarifa 1).</p>
+      <div class="fields">
+        <div><label>€ por km</label><input type="number" step="0.01" min="0.1" data-k="perKm"></div>
+        <div><label>Mínimo por trayecto (€)</label><input type="number" step="0.01" min="0" data-k="minimum"></div>
+        <div><label>Suplemento trayecto corto (€)</label><input type="number" step="0.01" min="0" data-k="shortTripSupplement"></div>
+        <div><label>…si son menos de (km)</label><input type="number" step="1" min="0" data-k="shortTripKm"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Tarifa 2</h2>
+      <p class="help">Fines de semana, festivos y noche. Multiplica el precio por km.</p>
+      <div class="fields">
+        <div class="full"><label>Multiplicador (1,2 = +20 %)</label><input type="number" step="0.01" min="1" max="5" data-k="t2.multiplier"></div>
+        <div><label>Noche desde</label><input type="time" data-k="t2.nightStart"></div>
+        <div><label>Noche hasta</label><input type="time" data-k="t2.nightEnd"></div>
+        <div><label class="check"><input type="checkbox" data-k="t2.saturday"> Sábados</label></div>
+        <div><label class="check"><input type="checkbox" data-k="t2.sunday"> Domingos</label></div>
+        <div class="full"><label>Festivos (una fecha por línea, AAAA-MM-DD)</label><textarea rows="5" data-k="t2.holidays" data-list></textarea></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Extras y pasajeros</h2>
+      <p class="help">Precio por unidad. Se suma al total (sin Tarifa 2). Pon 0 para que sea gratis.</p>
+      <div class="fields">
+        <div><label>Silla de bebé (€)</label><input type="number" step="0.01" min="0" data-k="extras.baby"></div>
+        <div><label>Silla de niño (€)</label><input type="number" step="0.01" min="0" data-k="extras.child"></div>
+        <div><label>Alzador (€)</label><input type="number" step="0.01" min="0" data-k="extras.booster"></div>
+        <div><label>Máx. pasajeros con movilidad reducida</label><input type="number" min="1" max="20" data-k="pmrMaxPax"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Cobertura</h2>
+      <p class="help">Lo que se muestra en «Cobertura». Uno por línea.</p>
+      <div class="fields">
+        <div><label>Aeropuertos</label><textarea rows="7" data-k="coverage.airports" data-list></textarea></div>
+        <div><label>Puertos</label><textarea rows="7" data-k="coverage.ports" data-list></textarea></div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card" id="dest">
+    <h2>Pueblos y ciudades</h2>
+    <p class="help">Precio = km × € por km (con mínimo y suplemento). Los precios se recalculan solos.</p>
+    <div class="toolbar">
+      <input id="filter" placeholder="Buscar…">
+      <button class="ghost small" id="addBtn">+ Añadir destino</button>
+      <small class="muted" id="count"></small>
+    </div>
+    <div class="wrap"><table>
+      <thead><tr><th>Nombre</th><th>Km</th><th>Zona</th><th>Tipo</th><th>Tarifa 1</th><th>Tarifa 2</th><th></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+  </section>
+
+  <div class="savebar"><span id="dirty"></span><button id="saveBtn">Guardar tarifas</button></div>
+</main>
+<script src="/panel/panel.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const NL = String.fromCharCode(10);
+let data = null;
+
+const getPath = (o, k) => k.split('.').reduce((a, x) => a?.[x], o);
+const setPath = (o, k, v) => { const ks = k.split('.'); const last = ks.pop(); ks.reduce((a, x) => (a[x] ??= {}), o)[last] = v; };
+const money = n => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n);
+
+// Mismo cálculo que lib/pricing.js (solo para ver el precio al momento)
+function prices(km) {
+  const supp = km < data.shortTripKm ? data.shortTripSupplement : 0;
+  const t1 = Math.round(Math.max(data.minimum, km * data.perKm + supp));
+  return [t1, Math.round(t1 * data.t2.multiplier)];
+}
+
+function fill(res) {
+  data = res.pricing;
+  document.querySelectorAll('[data-k]').forEach(el => {
+    const v = getPath(data, el.dataset.k);
+    if (el.type === 'checkbox') el.checked = !!v;
+    else el.value = 'list' in el.dataset ? (v || []).join(NL) : v ?? '';
+  });
+  $('meta').textContent = res.meta ? `Última modificación: ${res.meta.updatedAt} por ${res.meta.updatedBy}` : 'Tarifas por defecto (sin modificar)';
+  renderRows();
+  markDirty(false);
+}
+
+function renderRows() {
+  const q = $('filter').value.trim().toLowerCase();
+  $('rows').innerHTML = data.destinations.map((d, i) => {
+    if (q && !`${d.name} ${d.zone}`.toLowerCase().includes(q)) return '';
+    const [t1, t2] = d.km > 0 ? prices(d.km) : ['—', '—'];
+    return `<tr data-i="${i}">
+      <td><input data-f="name" value="${esc(d.name)}" placeholder="Nombre"></td>
+      <td style="width:90px"><input data-f="km" type="number" min="1" step="1" value="${esc(d.km)}"></td>
+      <td><input data-f="zone" value="${esc(d.zone)}"></td>
+      <td style="width:120px"><select data-f="type"><option value="pueblo" ${d.type === 'pueblo' ? 'selected' : ''}>Pueblo</option><option value="ciudad" ${d.type === 'ciudad' ? 'selected' : ''}>Ciudad</option></select></td>
+      <td class="price">${typeof t1 === 'number' ? money(t1) : t1}</td>
+      <td class="price">${typeof t2 === 'number' ? money(t2) : t2}</td>
+      <td><button class="danger small" data-del="${i}">Quitar</button></td></tr>`;
+  }).join('');
+  $('count').textContent = `${data.destinations.length} destinos`;
+}
+
+let dirty = false;
+function markDirty(v = true) { dirty = v; $('dirty').textContent = v ? 'Hay cambios sin guardar' : ''; }
+window.addEventListener('beforeunload', e => { if (dirty) e.preventDefault(); });
+
+// Campos generales
+document.querySelectorAll('[data-k]').forEach(el => el.addEventListener('input', () => {
+  let v;
+  if (el.type === 'checkbox') v = el.checked;
+  else if ('list' in el.dataset) v = el.value.split(NL).map(x => x.trim()).filter(Boolean);
+  else if (el.type === 'number') v = el.value === '' ? '' : Number(el.value);
+  else v = el.value;
+  setPath(data, el.dataset.k, v);
+  if (['perKm', 'minimum', 'shortTripKm', 'shortTripSupplement', 't2.multiplier'].includes(el.dataset.k)) refreshPrices();
+  markDirty();
+}));
+
+// Solo repinta los precios para no perder el foco del campo que se está editando
+function refreshPrices() {
+  document.querySelectorAll('#rows tr').forEach(tr => {
+    const d = data.destinations[tr.dataset.i];
+    const cells = tr.querySelectorAll('.price');
+    const [t1, t2] = d.km > 0 ? prices(d.km).map(money) : ['—', '—'];
+    cells[0].textContent = t1; cells[1].textContent = t2;
+  });
+}
+
+$('rows').addEventListener('input', e => {
+  const tr = e.target.closest('tr'), f = e.target.dataset.f;
+  if (!tr || !f) return;
+  data.destinations[tr.dataset.i][f] = f === 'km' ? Number(e.target.value) : e.target.value;
+  if (f === 'km') refreshPrices();
+  markDirty();
+});
+$('rows').addEventListener('click', e => {
+  const i = e.target.dataset.del;
+  if (i === undefined) return;
+  const d = data.destinations[i];
+  if (d.name && !confirm(`¿Quitar «${d.name}» de la tabla?`)) return;
+  data.destinations.splice(i, 1);
+  renderRows(); markDirty();
+});
+$('addBtn').onclick = () => {
+  $('filter').value = '';
+  data.destinations.unshift({ id: '', name: '', km: '', zone: '', type: 'pueblo' });
+  renderRows(); markDirty();
+  $('rows').querySelector('input').focus();
+};
+$('filter').oninput = renderRows;
+
+$('saveBtn').onclick = async () => {
+  const empty = data.destinations.filter(d => !d.name || !(d.km > 0));
+  if (empty.length && !confirm(`${empty.length} destino(s) sin nombre o sin km no se guardarán. ¿Continuar?`)) return;
+  $('saveBtn').disabled = true;
+  try { fill(await api('/api/panel/pricing', { method: 'PUT', body: data })); toast('Tarifas guardadas. Ya están en la web.'); }
+  catch (e) { toast(e.message, 'error'); }
+  $('saveBtn').disabled = false;
+};
+$('resetBtn').onclick = async () => {
+  if (!confirm('¿Volver a las tarifas por defecto? Se pierden los cambios hechos aquí.')) return;
+  try { fill(await api('/api/panel/pricing/reset', { method: 'POST' })); toast('Tarifas restauradas.'); }
+  catch (e) { toast(e.message, 'error'); }
+};
+
+initPanel('tarifas').then(async () => fill(await api('/api/panel/pricing'))).catch(e => toast(e.message, 'error'));
+</script></body></html>
