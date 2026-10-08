@@ -38,6 +38,34 @@ function sanitize(value, tpl) {
   return typeof value === 'string' ? value.slice(0, MAX_TEXT) : '';
 }
 
+// Textos por defecto que han cambiado. Si el contenido guardado conserva el valor ANTIGUO tal cual
+// (nadie lo ha personalizado), se sustituye por el nuevo al arrancar. Lo personalizado no se toca.
+const RENAMED = {
+  ES: {
+    'Silla infantil gratis': 'Silla infantil (5 €)',
+    '1-3 pasajeros': '1-4 pasajeros',
+    'Portugal y Pueblos Blancos': 'Pueblos Blancos y Costa',
+    'PORTUGAL': 'PUERTOS DE CRUCEROS',
+    'Faro • Lisboa • Oporto • Puertos y aeropuertos': 'Cádiz • Málaga • Huelva • Algeciras',
+    'Presupuesto inmediato. Pago protegido. Confirmación por WhatsApp.': 'Precio al momento. Pago protegido. Confirmación por WhatsApp.'
+  },
+  EN: {
+    'Free child seat': 'Child seat (€5)',
+    '1-3 passengers': '1-4 passengers',
+    'Portugal & White Villages': 'White Villages & Coast',
+    'PORTUGAL': 'CRUISE PORTS',
+    'Faro • Lisbon • Porto • Ports & airports': 'Cadiz • Malaga • Huelva • Algeciras',
+    'Instant quote. Protected payment. WhatsApp confirmation.': 'Instant price. Protected payment. WhatsApp confirmation.'
+  }
+};
+const OLD_WHATSAPP = '34600000000'; // número de ejemplo
+
+function renameTexts(value, map) {
+  if (Array.isArray(value)) return value.map(v => renameTexts(v, map));
+  if (isObj(value)) return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, renameTexts(v, map)]));
+  return typeof value === 'string' && Object.hasOwn(map, value) ? map[value] : value;
+}
+
 function createContentStore(db) {
   db.exec(`CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY, value TEXT NOT NULL,
@@ -48,6 +76,20 @@ function createContentStore(db) {
     ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at, updated_by=excluded.updated_by`);
 
   let cache = null;
+
+  // Migración de textos antiguos (ver RENAMED)
+  (function migrate() {
+    const row = getRow.get();
+    if (!row) return;
+    let stored;
+    try { stored = JSON.parse(row.value); } catch { return; }
+    const next = { ...stored, ES: renameTexts(stored.ES, RENAMED.ES), EN: renameTexts(stored.EN, RENAMED.EN) };
+    if (next.contact?.whatsapp === OLD_WHATSAPP) next.contact = { ...next.contact, whatsapp: defaults.contact.whatsapp };
+    if (JSON.stringify(next) !== JSON.stringify(stored)) {
+      putRow.run(JSON.stringify(next), 'actualización');
+      console.log('Contenido: textos antiguos actualizados a los nuevos valores por defecto');
+    }
+  })();
 
   function get() {
     if (!cache) {
