@@ -44,6 +44,18 @@ CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings(date);
 const bookingCols = db.prepare('PRAGMA table_info(bookings)').all().map(c => c.name);
 if (!bookingCols.includes('privacy_accepted_at')) db.exec('ALTER TABLE bookings ADD COLUMN privacy_accepted_at TEXT'); // prueba de aceptación (RGPD)
 
+// Conservación (política de privacidad, apartado 4): las solicitudes que no llegaron a contratarse
+// se borran a los 12 meses. Las pagadas o confirmadas se conservan por obligaciones contables y fiscales.
+const purgeStale = db.prepare(`DELETE FROM bookings
+  WHERE payment_status != 'pagado' AND status IN ('pendiente', 'cancelada')
+    AND created_at < datetime('now', '-12 months')`);
+function purgeStaleBookings() {
+  const { changes } = purgeStale.run();
+  if (changes) console.log(`🧹 Borradas ${changes} solicitudes no contratadas con más de 12 meses`);
+}
+purgeStaleBookings();
+setInterval(purgeStaleBookings, 24 * 60 * 60 * 1000).unref();
+
 const auth = createAuth(db, { secure: BASE_URL.startsWith('https://') });
 const content = createContentStore(db);
 
