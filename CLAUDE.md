@@ -41,6 +41,12 @@ desarrollador: **español**. Todo el código vive en `alayan/`; el detalle técn
 `main` = producción (Railway despliega solo). `develop` = pruebas (entorno staging con su propia BBDD).
 Trabajar en `develop`, probar, y pasar a `main` con PR.
 
+Railway: proyecto `meticulous-vitality`, servicio `taxi-web` (root `/alayan`, volumen en `/data`).
+- production: rama `main` · https://taxi-web-production-a693.up.railway.app
+- staging: rama `develop` · https://taxi-web-staging.up.railway.app · `SUMUP_MOCK=true`
+CLI: `railway link --project meticulous-vitality --environment staging`. En PowerShell 5.1 pasar JSON a la CLI
+con `cmd /c "..."` (si no, se pierden las comillas). La región y el borrado de servicios se hacen en la web.
+
 ## Variables de entorno (en Railway, nunca en el repo)
 `BASE_URL` (https, sin barra final), `ADMIN_USER`/`ADMIN_PASS` (solo crean el primer admin; mín. 8 caracteres),
 `DB_PATH=/data/alayan.db`, `SUMUP_API_KEY`, `SUMUP_MERCHANT_CODE`, `SUMUP_MOCK`, `RESEND_API_KEY`, `MAIL_FROM`,
@@ -57,10 +63,12 @@ panel en `/login`. Para el diseño con recarga instantánea: `npm run dev:web` (
 - Nunca subir `.env`, claves ni ficheros `.db` (ya en `.gitignore`).
 
 ## Pendiente (octubre 2026)
-**Configuración** (bloque 2): entorno staging en Railway · región Europa (Ámsterdam; copia antes de migrar el
-volumen) · dominio IONOS → Cloudflare → Railway (SSL *Full (strict)*) y `BEHIND_CLOUDFLARE=true` · Resend con
-dominio verificado · bucket R2 + token · pasar `develop` → `main` (comprobar `ADMIN_PASS`, enlaces de pago antiguos
-sin pagar y que las reservas sobreviven).
+**Hecho (8 oct 2026):** entorno staging creado y probado · producción con `ADMIN_PASS` de 16 caracteres y `BASE_URL`.
+**Configuración:** cuenta en plan **Trial → pasar a Hobby** (si no, la web se para al acabar la prueba) · región
+Europa (Ámsterdam): primero staging, luego producción con copia previa (Railway tiene copias nativas de volumen) ·
+borrar el servicio vacío `taxi-web Copy` · dominio IONOS → Cloudflare → Railway (SSL *Full (strict)*) y
+`BEHIND_CLOUDFLARE=true` · Resend con dominio verificado · bucket R2 + token · pasar `develop` → `main` (comprobar
+que la reserva existente sobrevive; no había SumUp configurado en producción, así que no hay enlaces antiguos).
 **Cliente:** datos legales en `/admin` (bloquea producción) · su número de WhatsApp real · API key y merchant code de
 SumUp · hojas de reclamaciones de la Junta · Seguro Obligatorio de Viajeros · revisar `/condiciones` con un asesor.
 **Al final:** pago real de pocos euros y comprobar que los emails llegan (y no van a spam).
