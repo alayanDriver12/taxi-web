@@ -6,13 +6,15 @@ const rateLimit = require('express-rate-limit');
 const Database = require('better-sqlite3');
 const { createAuth, homeFor } = require('./lib/auth');
 const { createContentStore, IMAGE_SLOTS } = require('./lib/content');
+const { createSumUp } = require('./lib/sumup');
+const { createPayments } = require('./lib/payments');
 
 const {
   PORT = 3000, BASE_URL = `http://localhost:${PORT}`,
   ADMIN_USER = 'admin', ADMIN_PASS = '',
   SUMUP_API_KEY = '', SUMUP_MERCHANT_CODE = '',
-  DB_PATH = './data/alayan.db',
-  ALLOW_CLIENT_AMOUNT = 'false'
+  SUMUP_MOCK = 'false', // true = simular SumUp sin cuenta (desarrollo / staging). Se ignora si hay API key.
+  DB_PATH = './data/alayan.db'
 } = process.env;
 
 const DIST_DIR = path.join(__dirname, 'dist');     // web compilada (npm run build)
@@ -58,6 +60,13 @@ setInterval(purgeStaleBookings, 24 * 60 * 60 * 1000).unref();
 
 const auth = createAuth(db, { secure: BASE_URL.startsWith('https://') });
 const content = createContentStore(db);
+const sumup = createSumUp({ apiKey: SUMUP_API_KEY, merchantCode: SUMUP_MERCHANT_CODE, mock: SUMUP_MOCK === 'true', baseUrl: BASE_URL });
+const payments = createPayments(db, sumup, { baseUrl: BASE_URL });
+console.log({
+  real: '💳 SumUp: conectado (cobros reales)',
+  mock: '🧪 SumUp: MODO SIMULACIÓN — no se cobra nada (SUMUP_MOCK=true)',
+  off: '⚠️  SumUp: sin configurar (faltan SUMUP_API_KEY y SUMUP_MERCHANT_CODE): los clientes no podrán pagar online'
+}[sumup.mode]);
 
 // Primer arranque: el primer administrador sale de ADMIN_USER / ADMIN_PASS
 if (!auth.countUsers()) {
@@ -83,39 +92,6 @@ app.use(express.json({ limit: '50kb' }));
 const clean = (v, max = 200) => String(v ?? '').trim().slice(0, max);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
-// SumUp
-async function createCheckout(booking, amount) {
-  if (!SUMUP_API_KEY || !SUMUP_MERCHANT_CODE) return null;
-  const ref = `ALY-${booking.id}-${Date.now()}`;
-  const r = await fetch('https://api.sumup.com/v0.1/checkouts', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${SUMUP_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      checkout_reference: ref, amount: Number(amount.toFixed(2)), currency: 'EUR',
-      merchant_code: SUMUP_MERCHANT_CODE,
-      description: `Transfer ${booking.origin} → ${booking.destination} (${booking.date})`,
-      redirect_url: `${BASE_URL}/gracias.html?b=${booking.id}`,
-      return_url: `${BASE_URL}/api/sumup/webhook`,
-      hosted_checkout: { enabled: true }
-    })
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error('SumUp: ' + JSON.stringify(data));
-  db.prepare(`UPDATE bookings SET checkout_id=?, checkout_url=?, amount_eur=?, payment_status='enlace_enviado' WHERE id=?`)
-    .run(data.id, data.hosted_checkout_url, amount, booking.id);
-  return data.hosted_checkout_url;
-}
-
-async function syncPayment(checkoutId) {
-  const r = await fetch(`https://api.sumup.com/v0.1/checkouts/${encodeURIComponent(checkoutId)}`, {
-    headers: { Authorization: `Bearer ${SUMUP_API_KEY}` }
-  });
-  const c = await r.json();
-  if (c.status === 'PAID') db.prepare(`UPDATE bookings SET payment_status='pagado', status='pagada' WHERE checkout_id=? AND payment_status!='pagado'`).run(checkoutId);
-  else if (c.status === 'FAILED') db.prepare(`UPDATE bookings SET payment_status='fallido' WHERE checkout_id=?`).run(checkoutId);
-  return c.status;
-}
-
 // ---------- API pública ----------
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
 
@@ -134,34 +110,77 @@ app.post('/api/bookings', limiter, async (req, res) => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date) || d.date < new Date().toISOString().slice(0, 10))
     return res.status(400).json({ error: 'La fecha debe ser hoy o posterior.' });
 
+  // Es una solicitud: el precio lo pone después el admin y el cliente paga desde /pago/<token>
   const info = db.prepare(`INSERT INTO bookings (name,company,phone,email,origin,destination,date,time,pax,luggage,flight,sign,privacy_accepted_at)
     VALUES (@name,@company,@phone,@email,@origin,@destination,@date,@time,@pax,@luggage,@flight,@sign,datetime('now'))`).run(d);
-  const booking = { id: info.lastInsertRowid, ...d };
-
-  let checkoutUrl = null;
-  try {
-    // Por seguridad el precio lo fija el admin; solo se usa el importe del cliente si se activa expresamente
-    const clientAmount = parseFloat(String(b.amount || '').replace(',', '.').replace(/[^\d.]/g, ''));
-    if (ALLOW_CLIENT_AMOUNT === 'true' && clientAmount > 0) checkoutUrl = await createCheckout(booking, clientAmount);
-  } catch (e) { console.error(e.message); }
-  res.status(201).json({ id: booking.id, checkoutUrl });
+  res.status(201).json({ id: info.lastInsertRowid });
 });
 
-app.post('/api/sumup/webhook', express.json(), async (req, res) => {
+// SumUp avisa de cambios de estado. No nos fiamos del cuerpo: se consulta siempre su API.
+app.post('/api/sumup/webhook', async (req, res) => {
   try {
     const id = req.body?.id || req.body?.payload?.checkout_id;
-    if (id && SUMUP_API_KEY) await syncPayment(id); // se verifica siempre contra la API de SumUp
-  } catch (e) { console.error(e.message); }
+    if (id) await payments.syncCheckout(id);
+  } catch (e) { console.error('Webhook SumUp:', e.message); }
   res.sendStatus(200);
 });
 
-app.get('/api/bookings/:id/status', async (req, res) => {
-  const row = db.prepare('SELECT id, payment_status, status, checkout_id FROM bookings WHERE id=?').get(req.params.id);
-  if (!row) return res.sendStatus(404);
-  if (row.checkout_id && row.payment_status !== 'pagado' && SUMUP_API_KEY) await syncPayment(row.checkout_id).catch(() => {});
-  const r = db.prepare('SELECT id, payment_status, status FROM bookings WHERE id=?').get(req.params.id);
-  res.json(r);
+// Página de pago del cliente. El token (32 caracteres aleatorios) es la única «llave».
+const TOKEN_RE = /^[A-Za-z0-9_-]{32}$/;
+const payLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
+
+function bookingByToken(req, res) {
+  const b = TOKEN_RE.test(req.params.token) && payments.findByToken(req.params.token);
+  if (!b) res.status(404).json({ error: 'not_found' });
+  return b || null;
+}
+
+app.get('/api/pay/:token', payLimiter, async (req, res) => {
+  let b = bookingByToken(req, res);
+  if (!b) return;
+  if (b.payment_status !== 'pagado') {
+    await payments.syncBooking(b.id); // por si vuelve de SumUp antes de que llegue el webhook
+    b = payments.findByToken(req.params.token);
+  }
+  res.set('Cache-Control', 'no-store').json(payments.publicView(b));
 });
+
+app.post('/api/pay/:token/checkout', payLimiter, async (req, res) => {
+  const b = bookingByToken(req, res);
+  if (!b) return;
+  if (req.body?.accept !== true) return res.status(400).json({ error: 'Debes aceptar el precio y las condiciones del servicio.' });
+  if (sumup.mode === 'off') return res.status(503).json({ code: 'unavailable' });
+  try { res.json({ url: await payments.startCheckout(b) }); }
+  catch (e) {
+    const fromSumUp = e.message.startsWith('SumUp');
+    if (fromSumUp) console.error('Checkout SumUp:', e.message);
+    res.status(fromSumUp ? 502 : 400).json({ error: fromSumUp ? 'No se pudo iniciar el pago. Inténtalo de nuevo en unos minutos.' : e.message });
+  }
+});
+
+// Simulador de SumUp (solo con SUMUP_MOCK=true y sin API key)
+if (sumup.mode === 'mock') {
+  app.get('/sumup-simulado/:id', (req, res) => {
+    const c = sumup.checkouts.get(req.params.id);
+    if (!c) return res.status(404).send('Checkout simulado no encontrado (¿se reinició el servidor?).');
+    res.type('html').send(`<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SumUp simulado</title><style>body{font:16px system-ui;background:#eef1f5;margin:0;display:grid;place-items:center;min-height:100vh;padding:16px}
+.c{background:#fff;border-radius:14px;padding:28px;max-width:420px;width:100%;box-shadow:0 10px 40px #0002}.w{background:#fff3cd;border:1px solid #e0c56b;padding:10px;border-radius:8px;font-size:13px}
+h1{font-size:20px}b{font-size:28px;display:block;margin:8px 0 20px}button{width:100%;padding:12px;border:0;border-radius:8px;font-size:15px;margin-top:8px;cursor:pointer}
+.ok{background:#1a73e8;color:#fff}.ko{background:#eee}</style></head><body><div class="c">
+<p class="w">🧪 <b style="display:inline;font-size:13px">SIMULADOR</b> — Esto no es SumUp y no se cobra nada. Sirve para probar la web sin cuenta.</p>
+<h1>${esc(c.description)}</h1><b>${Number(c.amount).toFixed(2).replace('.', ',')} €</b>
+<form method="post"><button class="ok" name="r" value="PAID">Simular pago correcto</button><button class="ko" name="r" value="FAILED">Simular pago rechazado</button></form>
+</div></body></html>`);
+  });
+  app.post('/sumup-simulado/:id', express.urlencoded({ extended: false }), async (req, res) => {
+    const c = sumup.checkouts.get(req.params.id);
+    if (!c) return res.sendStatus(404);
+    if (c.status === 'PENDING' && ['PAID', 'FAILED'].includes(req.body.r)) c.status = req.body.r;
+    await payments.syncCheckout(req.params.id); // lo que haría el webhook real
+    res.redirect(c.redirectUrl);
+  });
+}
 
 app.get('/api/content', (req, res) => res.set('Cache-Control', 'no-cache').json(content.get()));
 
@@ -194,25 +213,41 @@ const adminOnly = auth.requireApi('admin');
 
 // Reservas
 panel.get('/bookings', (req, res) => {
-  res.json(db.prepare('SELECT * FROM bookings ORDER BY id DESC LIMIT 500').all());
+  const rows = db.prepare('SELECT * FROM bookings ORDER BY id DESC LIMIT 500').all();
+  const pays = payments.byBooking();
+  res.json({
+    sumupMode: sumup.mode,
+    bookings: rows.map(({ checkout_id, checkout_url, pay_token, ...r }) => ({
+      ...r, payUrl: pay_token ? payments.payUrl(pay_token) : null, payments: pays[r.id] || []
+    }))
+  });
 });
 
-panel.patch('/bookings/:id', async (req, res) => {
+panel.patch('/bookings/:id', (req, res) => {
   const id = Number(req.params.id);
   const cur = db.prepare('SELECT * FROM bookings WHERE id=?').get(id);
   if (!cur) return res.sendStatus(404);
-  const { status, notes, amount, createLink } = req.body || {};
+  const { status, notes, amount } = req.body || {};
+  if (amount !== undefined) {
+    if (cur.payment_status === 'pagado') return res.status(400).json({ error: 'La reserva ya está pagada: el precio no se puede cambiar.' });
+    const n = Math.round(Number(String(amount).replace(',', '.')) * 100) / 100;
+    if (!(n > 0 && n < 100000)) return res.status(400).json({ error: 'Precio no válido.' });
+    db.prepare('UPDATE bookings SET amount_eur=? WHERE id=?').run(n, id);
+  }
   if (['pendiente','pagada','confirmada','cancelada'].includes(status)) db.prepare('UPDATE bookings SET status=? WHERE id=?').run(status, id);
   if (notes !== undefined) db.prepare('UPDATE bookings SET notes=? WHERE id=?').run(clean(notes, 1000), id);
-  let link = cur.checkout_url;
-  if (amount !== undefined && Number(amount) > 0) db.prepare('UPDATE bookings SET amount_eur=? WHERE id=?').run(Number(amount), id);
-  if (createLink) {
-    const amt = Number(amount ?? cur.amount_eur);
-    if (!(amt > 0)) return res.status(400).json({ error: 'Indica un importe.' });
-    try { link = await createCheckout(cur, amt); if (!link) return res.status(400).json({ error: 'SumUp no está configurado.' }); }
-    catch (e) { return res.status(502).json({ error: e.message }); }
-  }
-  res.json({ ok: true, checkoutUrl: link });
+  res.json({ ok: true });
+});
+
+// «Enviar presupuesto»: devuelve el enlace /pago/<token> para mandárselo al cliente
+panel.post('/bookings/:id/quote', (req, res) => {
+  try { res.json({ url: payments.ensureQuote(Number(req.params.id)) }); }
+  catch (e) { res.status(400).json({ error: e.message }); }
+});
+
+panel.post('/bookings/:id/sync', async (req, res) => {
+  await payments.syncBooking(Number(req.params.id));
+  res.json({ ok: true });
 });
 
 panel.delete('/bookings/:id', adminOnly, (req, res) => {
@@ -325,13 +360,24 @@ function renderIndex(pageTitle) {
 // Páginas legales: las pinta la misma app React según la ruta (web/src/Legal.jsx)
 const LEGAL_PAGES = { '/aviso-legal': 'notice', '/privacidad': 'privacy', '/cookies': 'cookies', '/condiciones': 'terms' };
 
-app.get(['/', '/index.html', ...Object.keys(LEGAL_PAGES)], (req, res) => {
-  const legalKey = LEGAL_PAGES[req.path.replace(/[/]+$/, '')];
-  try { res.set('Cache-Control', 'no-cache').type('html').send(renderIndex(legalKey && content.get().ES.footer.legal[legalKey])); }
+function sendIndex(res, title) {
+  try { res.type('html').send(renderIndex(title)); }
   catch (e) {
     if (e.code !== 'ENOENT') throw e;
     res.status(503).send('Falta compilar la web: ejecuta <code>npm run build</code>.');
   }
+}
+
+app.get(['/', '/index.html', ...Object.keys(LEGAL_PAGES)], (req, res) => {
+  const legalKey = LEGAL_PAGES[req.path.replace(/[/]+$/, '')];
+  res.set('Cache-Control', 'no-cache');
+  sendIndex(res, legalKey && content.get().ES.footer.legal[legalKey]);
+});
+
+// Página de pago (la pinta React: web/src/Pay.jsx). Privada: que no la indexe nadie.
+app.get('/pago/:token', (req, res) => {
+  res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' });
+  sendIndex(res, content.get().ES.payment.title);
 });
 
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '30d' }));

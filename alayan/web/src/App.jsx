@@ -1,53 +1,41 @@
 import { useEffect, useState } from 'react';
-import { submitBooking } from './pay.js';
+import { sendBooking } from './booking.js';
 import Legal, { LEGAL_PATHS } from './Legal.jsx';
+import Pay, { payTokenFromPath } from './Pay.jsx';
+import { fill, withLang } from './util.js';
 
 const EMPTY_FORM = {
   name: '', company: '', phone: '', email: '', origin: '', destination: '',
-  date: '', time: '', pax: '2', luggage: '2', flight: '', sign: '', amount: ''
+  date: '', time: '', pax: '2', luggage: '2', flight: '', sign: ''
 };
 const FORM_FIELDS = [
   ['name'], ['company'], ['phone'], ['email'], ['origin'], ['destination'],
   ['date', 'date'], ['time', 'time'], ['pax'], ['luggage'], ['flight'], ['sign']
 ];
+const REQUIRED = ['name', 'phone', 'email', 'origin', 'destination', 'date', 'time'];
 const WIDE_FIELDS = new Set(['origin', 'destination', 'flight', 'sign']);
 
-// Sustituye {clave} por su valor: "© {year}" → "© 2026"
-export const fill = (tpl, vars) => String(tpl ?? '').replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
-
-// El idioma viaja en la URL (?lang=en) al ir a las páginas legales y volver
-const initialLang = () => (new URLSearchParams(location.search).get('lang') === 'en' ? 'EN' : 'ES');
-const withLang = (href, lang) => (lang === 'EN' ? `${href}?lang=en` : href);
+// Idioma inicial: ?lang=en. En la página de pago, si no viene, se usa el del navegador.
+function initialLang() {
+  const param = new URLSearchParams(location.search).get('lang');
+  if (param) return param === 'en' ? 'EN' : 'ES';
+  return payTokenFromPath() && !/^es\b/i.test(navigator.language || 'es') ? 'EN' : 'ES';
+}
 
 export default function App({ content }) {
   const [lang, setLang] = useState(initialLang);
   const [form, setForm] = useState(EMPTY_FORM);
   const [accepted, setAccepted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sentId, setSentId] = useState(null);
+  const [formError, setFormError] = useState('');
   const t = content[lang];
   const img = content.images;
   const waBase = `https://wa.me/${content.contact.whatsapp}`;
   const legalPage = LEGAL_PATHS[location.pathname.replace(/\/+$/, '')];
+  const payToken = payTokenFromPath();
 
   useEffect(() => { document.documentElement.lang = lang.toLowerCase(); }, [lang]);
-
-  const footer = <Footer t={t} img={img} lang={lang} />;
-
-  if (legalPage) {
-    return (
-      <div className="min-h-screen bg-[#0A0A0A] text-[#F7F3ED] antialiased selection:bg-[#C5A46A]/30">
-        <header className="border-b border-white/[0.06]">
-          <div className="mx-auto max-w-[1440px] px-6 md:px-10 h-[72px] flex items-center justify-between">
-            <a href={withLang('/', lang)}>
-              <img src={img.logo} alt={`${t.brand.name} logo`} className="h-[44px] w-auto rounded-[10px] object-contain bg-white p-1" />
-            </a>
-            <a href={withLang('/', lang)} className="text-[11px] tracking-[0.2em] text-white/60 hover:text-white transition">← {t.footer.legal.back.toUpperCase()}</a>
-          </div>
-        </header>
-        <Legal page={legalPage} content={content} t={t} lang={lang} />
-        {footer}
-      </div>
-    );
-  }
 
   const langButton = code => (
     <button
@@ -57,6 +45,52 @@ export default function App({ content }) {
       {code}
     </button>
   );
+  const langSwitch = (
+    <div className="flex items-center gap-1">
+      {langButton('ES')}
+      <span className="text-white/20">|</span>
+      {langButton('EN')}
+    </div>
+  );
+  const footer = <Footer t={t} img={img} lang={lang} />;
+
+  // Páginas secundarias (legales y pago): cabecera sencilla + pie
+  if (legalPage || payToken) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A] text-[#F7F3ED] antialiased selection:bg-[#C5A46A]/30">
+        <header className="border-b border-white/[0.06]">
+          <div className="mx-auto max-w-[1440px] px-6 md:px-10 h-[72px] flex items-center justify-between gap-4">
+            <a href={withLang('/', lang)}>
+              <img src={img.logo} alt={`${t.brand.name} logo`} className="h-[44px] w-auto rounded-[10px] object-contain bg-white p-1" />
+            </a>
+            <div className="flex items-center gap-5">
+              {langSwitch}
+              <a href={withLang('/', lang)} className="hidden sm:inline text-[11px] tracking-[0.2em] text-white/60 hover:text-white transition">← {t.footer.legal.back.toUpperCase()}</a>
+            </div>
+          </div>
+        </header>
+        {legalPage
+          ? <Legal page={legalPage} content={content} t={t} lang={lang} />
+          : <Pay token={payToken} t={t} lang={lang} waBase={waBase} />}
+        {footer}
+      </div>
+    );
+  }
+
+  async function send() {
+    setFormError('');
+    if (REQUIRED.some(k => !String(form[k]).trim())) return setFormError(t.booking.missing);
+    if (!accepted) return setFormError(t.booking.mustAccept);
+    setSending(true);
+    try {
+      const { id } = await sendBooking({ ...form, privacy: true });
+      setSentId(id);
+    } catch (e) {
+      setFormError(e.message || t.booking.error);
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#F7F3ED] antialiased selection:bg-[#C5A46A]/30">
@@ -79,11 +113,7 @@ export default function App({ content }) {
             <a href="#servicios" className="hover:text-white transition">{t.nav.services}</a>
           </nav>
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1">
-              {langButton('ES')}
-              <span className="text-white/20">|</span>
-              {langButton('EN')}
-            </div>
+            {langSwitch}
             <a href="#reserva" className="hidden md:inline-flex h-10 px-6 items-center justify-center rounded-full bg-white text-black text-[11px] tracking-[0.2em] font-semibold hover:bg-[#F7F3ED] transition">
               {t.nav.book.toUpperCase()}
             </a>
@@ -314,63 +344,72 @@ export default function App({ content }) {
             </div>
           </div>
           <div className="rounded-[28px] bg-[#F7F3ED] text-black p-6 md:p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
-            <div className="grid md:grid-cols-2 gap-4">
-              {FORM_FIELDS.map(([key, type]) => (
-                <div key={key} className={WIDE_FIELDS.has(key) ? 'md:col-span-2' : ''}>
-                  <label className="text-[11px] tracking-[0.18em] text-black/60">{t.booking.fields[key]}</label>
-                  <input
-                    type={type || 'text'}
-                    value={form[key]}
-                    onChange={e => setForm({ ...form, [key]: e.target.value })}
-                    className="mt-1.5 w-full h-11 px-4 rounded-full bg-white border border-black/10 text-[14px] outline-none focus:border-[#C5A46A] focus:ring-2 focus:ring-[#C5A46A]/20"
-                    placeholder={key === 'sign' ? t.booking.placeholders.sign : ''}
-                  />
-                </div>
-              ))}
-              <div className="md:col-span-2">
-                <label className="text-[11px] tracking-[0.18em] text-black/60">{t.booking.fields.amount}</label>
-                <input
-                  value={form.amount}
-                  onChange={e => setForm({ ...form, amount: e.target.value })}
-                  placeholder={t.booking.placeholders.amount}
-                  className="mt-1.5 w-full h-11 px-4 rounded-full bg-white border border-black/10 text-[14px] outline-none focus:border-[#C5A46A]"
-                />
+            {sentId ? (
+              <div className="py-10 text-center" role="status">
+                <div className="mx-auto h-14 w-14 rounded-full bg-[#C5A46A] grid place-items-center text-[24px]">✓</div>
+                <p className="mt-6 serif text-[30px] leading-tight max-w-[440px] mx-auto">{fill(t.booking.sent, { id: sentId })}</p>
+                <a
+                  href={`${waBase}?text=${encodeURIComponent(fill(t.booking.whatsappMessage, form))}`}
+                  target="_blank"
+                  rel="noopener"
+                  className="mt-8 inline-flex h-11 px-6 items-center rounded-full border border-black/15 text-[11px] tracking-[0.16em] font-semibold hover:bg-black/5 transition"
+                >
+                  {t.booking.whatsapp.toUpperCase()}
+                </a>
               </div>
-            </div>
-            {/* Aceptación de privacidad y condiciones + información básica (primera capa, art. 13 RGPD) */}
-            <label className="mt-6 flex gap-3 items-start text-[12px] leading-relaxed text-black/70 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={accepted}
-                onChange={e => setAccepted(e.target.checked)}
-                className="mt-0.5 h-4 w-4 shrink-0 accent-[#C5A46A]"
-              />
-              <span>
-                {t.booking.acceptPrefix}{' '}
-                <a href={withLang('/privacidad', lang)} target="_blank" className="underline hover:text-black">{t.footer.legal.privacy.toLowerCase()}</a>{' '}
-                {t.booking.acceptJoin}{' '}
-                <a href={withLang('/condiciones', lang)} target="_blank" className="underline hover:text-black">{t.footer.legal.terms.toLowerCase()}</a>.
-              </span>
-            </label>
-            <p className="mt-3 text-[11px] leading-relaxed text-black/45">{fill(t.booking.privacyInfo, { owner: content.legal.owner || t.brand.name })}</p>
-            <div className="mt-6 grid sm:grid-cols-2 gap-3">
-              <button
-                onClick={() => submitBooking({ ...form, privacy: accepted }, t.booking.mustAccept)}
-                className="h-12 px-4 rounded-full bg-[#0A0A0A] text-white text-[11px] md:text-[12px] tracking-[0.16em] font-semibold flex items-center justify-center gap-2 text-center leading-tight hover:bg-black transition"
-              >
-                <span className="h-6 w-6 shrink-0 rounded-full bg-[#C5A46A] text-black grid place-items-center font-bold text-[12px]">€</span>
-                {t.booking.pay.toUpperCase()}
-              </button>
-              <a
-                href={`${waBase}?text=${encodeURIComponent(fill(t.booking.whatsappMessage, form))}`}
-                target="_blank"
-                rel="noopener"
-                className="h-12 px-4 rounded-full border border-black/15 flex items-center justify-center text-center leading-tight text-[11px] md:text-[12px] tracking-[0.14em] font-semibold hover:bg-black/5 transition"
-              >
-                {t.booking.whatsapp.toUpperCase()}
-              </a>
-            </div>
-            <div className="mt-4 text-center text-[11px] tracking-wide text-black/50">{t.booking.secure}</div>
+            ) : (
+              <>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {FORM_FIELDS.map(([key, type]) => (
+                    <div key={key} className={WIDE_FIELDS.has(key) ? 'md:col-span-2' : ''}>
+                      <label className="text-[11px] tracking-[0.18em] text-black/60">{t.booking.fields[key]}</label>
+                      <input
+                        type={type || 'text'}
+                        value={form[key]}
+                        onChange={e => setForm({ ...form, [key]: e.target.value })}
+                        className="mt-1.5 w-full h-11 px-4 rounded-full bg-white border border-black/10 text-[14px] outline-none focus:border-[#C5A46A] focus:ring-2 focus:ring-[#C5A46A]/20"
+                        placeholder={key === 'sign' ? t.booking.placeholders.sign : ''}
+                      />
+                    </div>
+                  ))}
+                </div>
+                {/* Aceptación de privacidad y condiciones + información básica (primera capa, art. 13 RGPD) */}
+                <label className="mt-6 flex gap-3 items-start text-[12px] leading-relaxed text-black/70 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={accepted}
+                    onChange={e => setAccepted(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-[#C5A46A]"
+                  />
+                  <span>
+                    {t.booking.acceptPrefix}{' '}
+                    <a href={withLang('/privacidad', lang)} target="_blank" className="underline hover:text-black">{t.footer.legal.privacy.toLowerCase()}</a>{' '}
+                    {t.booking.acceptJoin}{' '}
+                    <a href={withLang('/condiciones', lang)} target="_blank" className="underline hover:text-black">{t.footer.legal.terms.toLowerCase()}</a>.
+                  </span>
+                </label>
+                <p className="mt-3 text-[11px] leading-relaxed text-black/45">{fill(t.booking.privacyInfo, { owner: content.legal.owner || t.brand.name })}</p>
+                {formError && <p className="mt-4 rounded-[14px] bg-[#6b2222]/10 border border-[#6b2222]/30 px-4 py-3 text-[13px] text-[#6b2222]" role="alert">{formError}</p>}
+                <div className="mt-6 grid sm:grid-cols-2 gap-3">
+                  <button
+                    onClick={send}
+                    disabled={sending}
+                    className="h-12 px-4 rounded-full bg-[#0A0A0A] text-white text-[11px] md:text-[12px] tracking-[0.16em] font-semibold flex items-center justify-center text-center leading-tight hover:bg-black transition disabled:opacity-60"
+                  >
+                    {sending ? '…' : t.booking.pay.toUpperCase()}
+                  </button>
+                  <a
+                    href={`${waBase}?text=${encodeURIComponent(fill(t.booking.whatsappMessage, form))}`}
+                    target="_blank"
+                    rel="noopener"
+                    className="h-12 px-4 rounded-full border border-black/15 flex items-center justify-center text-center leading-tight text-[11px] md:text-[12px] tracking-[0.14em] font-semibold hover:bg-black/5 transition"
+                  >
+                    {t.booking.whatsapp.toUpperCase()}
+                  </a>
+                </div>
+                <div className="mt-4 text-center text-[11px] tracking-wide text-black/50">{t.booking.secure}</div>
+              </>
+            )}
           </div>
         </div>
       </section>

@@ -66,7 +66,7 @@ const SECTION_NAMES = {
   legal: 'Datos legales', general: 'General y SEO', images: 'Imágenes',
   brand: 'Marca', nav: 'Menú', hero: 'Portada', exp: 'Experiencia', slogans: 'Lemas', fleet: 'Flota',
   classes: 'Clases y precios', drivers: 'Conductores', destinations: 'Destinos', services: 'Servicios',
-  booking: 'Reserva', footer: 'Pie de página'
+  booking: 'Reserva', payment: 'Página de pago', footer: 'Pie de página'
 };
 const IMAGE_NAMES = { logo: 'Logo', hero: 'Portada (imagen principal)', ford: 'Coche 1 (Ford)', tesla: 'Coche 2 (Tesla)' };
 
@@ -87,7 +87,13 @@ const KEY_LABELS = {
   vatNote: 'Nota de IVA bajo los precios', acceptPrefix: 'Casilla: texto inicial', acceptJoin: 'Casilla: texto entre enlaces',
   mustAccept: 'Aviso si no marca la casilla', privacyInfo: 'Información básica de privacidad', legal: 'Enlaces legales',
   notice: 'Aviso legal', privacy: 'Política de privacidad', cookies: 'Política de cookies', terms: 'Condiciones del servicio',
-  complaints: 'Aviso de hojas de reclamaciones', back: 'Enlace «volver»'
+  complaints: 'Aviso de hojas de reclamaciones', back: 'Enlace «volver»',
+  missing: 'Aviso de campos sin rellenar', sent: 'Mensaje de solicitud enviada', error: 'Mensaje de error al enviar',
+  hello: 'Saludo', route: 'Etiqueta «trayecto»', when: 'Etiqueta «fecha y hora»', total: 'Etiqueta del total',
+  redirecting: 'Texto mientras abre SumUp', checking: 'Texto mientras comprueba el pago', paidTitle: 'Título si ya está pagada',
+  paidText: 'Texto si ya está pagada', failed: 'Aviso de pago fallido', noPrice: 'Aviso si aún no hay precio',
+  cancelled: 'Aviso si está cancelada', past: 'Aviso si la fecha ya pasó', notFound: 'Aviso si el enlace no existe',
+  unavailable: 'Aviso si el pago online no está disponible', help: 'Enlace de ayuda'
 };
 const LEGAL_FIELDS = [
   ['owner', 'Titular', 'Nombre y apellidos si es autónomo, o razón social si es sociedad (ej: Alayan Driver S.L.).'],
@@ -100,7 +106,7 @@ const LEGAL_FIELDS = [
 ];
 const LEGAL_REQUIRED = ['owner', 'nif', 'address', 'email', 'phone', 'license'];
 const PATH_LABELS = {
-  'brand.name': 'Nombre de la marca', 'nav.book': 'Botón reservar', 'hero.badge': 'Etiqueta sobre la portada',
+  'brand.name': 'Nombre de la marca', 'nav.book': 'Botón reservar', 'booking.pay': 'Botón enviar solicitud', 'payment.pay': 'Botón pagar', 'payment.acceptPrefix': 'Casilla: texto inicial', 'payment.title': 'Título', 'payment.pax': 'Etiqueta «pasajeros»', 'payment.luggage': 'Etiqueta «maletas»', 'payment.flight': 'Etiqueta «vuelo»', 'hero.badge': 'Etiqueta sobre la portada',
   'fleet.ford': 'Coche 1 (imagen «Coche 1»)', 'fleet.tesla': 'Coche 2 (imagen «Coche 2»)', 'fleet.tesla.badge': 'Etiqueta en la esquina',
   'slogans.items': 'Etiquetas bajo la flota', 'classes.popular': 'Etiqueta «más reservado»',
   'classes.book': 'Texto del botón (va seguido del nombre de la clase)', 'classes.cards[].popular': 'Destacada (fondo negro y etiqueta)',
@@ -113,7 +119,12 @@ const HINTS = {
   'footer.rights': '{year} se sustituye por el año actual.',
   'booking.whatsappMessage': 'Se rellena con lo que escriba el cliente: {origin} {destination} {date} {time} {pax} {luggage} {flight} {sign}',
   'booking.privacyInfo': '{owner} se sustituye por el titular de «Datos legales». Obligatoria por el RGPD: si la cambias, que siga diciendo responsable, finalidad, legitimación, destinatarios y derechos.',
-  'footer.legal.note': 'Solo se muestra en inglés, encima de los textos legales (que están en español).'
+  'footer.legal.note': 'Solo se muestra en inglés, encima de los textos legales (que están en español).',
+  'booking.sent': '{id} se sustituye por el número de reserva.',
+  'payment.hello': '{name} se sustituye por el nombre del cliente.',
+  'payment.pay': '{amount} se sustituye por el precio.',
+  'payment.paidText': '{id} se sustituye por el número de reserva.',
+  'payment.acceptPrefix': 'Va seguido del enlace a las condiciones y de la política de cancelación.'
 };
 
 let defaults, loaded, state, savedJson = '', current = 'general';

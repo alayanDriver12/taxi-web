@@ -86,7 +86,7 @@ function Privacy({ L, v, owner, email, q }) {
 
       <H2>2. Qué datos tratamos</H2>
       <UL items={[
-        <><b className="text-white/90">Formulario de reserva:</b> nombre y apellidos, empresa (opcional), teléfono, email, origen, destino, fecha, hora, número de pasajeros y maletas, número de vuelo, texto del cartel de bienvenida e importe estimado. También guardamos la fecha y hora en que aceptas esta política.</>,
+        <><b className="text-white/90">Formulario de reserva:</b> nombre y apellidos, empresa (opcional), teléfono, email, origen, destino, fecha, hora, número de pasajeros y maletas, número de vuelo, y texto del cartel de bienvenida. También guardamos la fecha y hora en que aceptas esta política.</>,
         <><b className="text-white/90">Pago:</b> lo gestiona SumUp en su propia página. Nosotros no vemos ni guardamos los datos de tu tarjeta; solo recibimos si el pago se ha completado.</>,
         <><b className="text-white/90">WhatsApp:</b> si nos escribes por WhatsApp, tratamos tu número y el contenido de la conversación para atenderte.</>,
         <><b className="text-white/90">Datos técnicos:</b> nuestros servidores registran la dirección IP y datos básicos de cada petición para garantizar la seguridad y evitar abusos (por ejemplo, envíos masivos del formulario).</>
@@ -200,9 +200,9 @@ function Terms({ owner, email, q, content }) {
       <H2>3. Cómo se contrata</H2>
       <UL items={[
         'Rellenas el formulario de reserva con los datos del trayecto. El envío es una solicitud: todavía no es una reserva confirmada ni genera ningún cargo.',
-        'Revisamos la disponibilidad y te comunicamos por WhatsApp o email el precio cerrado del servicio, con un enlace de pago seguro de SumUp. El «importe estimado» que puedas escribir en el formulario es solo orientativo.',
-        'La reserva queda confirmada y el contrato celebrado cuando se completa el pago. Te enviaremos la confirmación por WhatsApp o email.',
-        'Antes de pagar puedes corregir cualquier dato respondiendo a nuestro mensaje. La reserva queda registrada en nuestro sistema y puedes pedirnos una copia en cualquier momento.',
+        'Revisamos la disponibilidad y te enviamos por WhatsApp o email el precio cerrado del servicio junto con un enlace personal a esta web. En esa página verás el resumen de la reserva y el precio con IVA, y deberás aceptar el precio y estas condiciones antes de pagar.',
+        'Al pulsar «Pagar» se te redirige a la pasarela segura de SumUp. La reserva queda confirmada y el contrato celebrado cuando el pago se completa; la misma página de la reserva te lo mostrará y te enviaremos la confirmación por WhatsApp o email.',
+        'Antes de pagar puedes corregir cualquier dato respondiendo a nuestro mensaje. La reserva queda registrada en nuestro sistema y puedes consultarla en tu enlace personal o pedirnos una copia en cualquier momento.',
         'El contrato puede formalizarse en español o en inglés.'
       ]} />
 

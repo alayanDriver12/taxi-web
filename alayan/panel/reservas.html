@@ -7,7 +7,16 @@
 .filters select{width:auto}
 .stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .stats .tag{font-size:12px;padding:4px 10px}
-td .row input{max-width:90px}
+.price{display:flex;gap:6px;align-items:center;margin-top:8px}
+.price input{max-width:96px}
+.paid{margin-top:8px;font-size:13px}
+.paid b{font-size:16px}
+details{margin-top:8px;font-size:12px;color:var(--muted)}
+details li{margin:3px 0}
+.mode{border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13px;border:1px solid}
+.mode.mock{background:#1f3a5a40;border-color:#4a7bb066}
+.mode.off{background:#6b222240;border-color:#b94a4a66}
+td.cobro{min-width:250px}
 </style></head><body>
 <main>
   <div class="head">
@@ -17,6 +26,7 @@ td .row input{max-width:90px}
       <a class="btn" href="/api/panel/bookings.csv">Exportar CSV</a>
     </div>
   </div>
+  <div id="mode"></div>
   <div class="filters">
     <input id="q" type="search" placeholder="Buscar nombre, teléfono, email, ruta…">
     <select id="view">
@@ -37,9 +47,13 @@ td .row input{max-width:90px}
 <script src="/panel/panel.js"></script>
 <script>
 const STATUSES = ['pendiente', 'pagada', 'confirmada', 'cancelada'];
+const PAY_LABELS = { sin_pago: 'sin presupuesto', enlace_enviado: 'presupuesto enviado', pagado: 'pagado', fallido: 'pago fallido' };
+const ATTEMPT_LABELS = { PENDING: 'en curso', PAID: 'pagado', FAILED: 'rechazado', EXPIRED: 'caducado' };
 const $ = id => document.getElementById(id);
 let me, all = [];
 const today = () => new Date().toLocaleDateString('sv'); // AAAA-MM-DD en hora local
+const eur = n => Number(n).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+const utc = s => s ? new Date(s.replace(' ', 'T') + 'Z').toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
 // Para wa.me hace falta el número con prefijo: si es un móvil español de 9 cifras se añade 34
 function waNumber(phone) {
@@ -47,9 +61,33 @@ function waNumber(phone) {
   return /^[67]\d{8}$/.test(d) ? '34' + d : d;
 }
 
-function waLink(r) {
-  const text = `Hola ${r.name}, aquí tienes el enlace de pago de tu transfer ${r.origin} → ${r.destination} (${r.date} ${r.time}): ${r.checkout_url}`;
+function waQuote(r) {
+  const text = `Hola ${r.name.split(' ')[0]}, te confirmamos tu transfer ${r.origin} → ${r.destination} el ${r.date} a las ${r.time}. ` +
+    `Precio: ${eur(r.amount_eur)} (IVA incluido). Puedes revisar los detalles y pagar de forma segura aquí: ${r.payUrl}`;
   return `https://wa.me/${waNumber(r.phone)}?text=${encodeURIComponent(text)}`;
+}
+
+function cobro(r) {
+  const attempts = r.payments.length
+    ? `<details><summary>${r.payments.length} intento${r.payments.length > 1 ? 's' : ''} de pago</summary><ul>${r.payments.slice().reverse().map(p =>
+        `<li>${utc(p.created_at)} · ${eur(p.amount_eur)} · ${ATTEMPT_LABELS[p.status] || p.status}${p.transaction_code ? ' · ref. ' + esc(p.transaction_code) : ''}</li>`).join('')}</ul></details>`
+    : '';
+  const pending = r.payments.some(p => p.status === 'PENDING');
+
+  if (r.payment_status === 'pagado') {
+    const paid = r.payments.find(p => p.status === 'PAID');
+    return `<span class="tag pagado">pagado</span>
+      <div class="paid"><b>${eur(paid?.amount_eur ?? r.amount_eur)}</b><br><small>${utc(r.paid_at)}${paid?.transaction_code ? ' · ref. ' + esc(paid.transaction_code) : ''}</small></div>${attempts}`;
+  }
+  const canQuote = r.status !== 'cancelada' && r.date >= today();
+  return `<span class="tag ${r.payment_status}">${PAY_LABELS[r.payment_status] || r.payment_status}</span>
+    <div class="price"><input id="a${r.id}" type="number" step="0.01" min="0" placeholder="Precio €" value="${r.amount_eur ?? ''}" ${canQuote ? '' : 'disabled'}>
+      ${canQuote ? `<button class="small" data-quote="${r.id}">${r.payUrl ? 'Actualizar' : 'Enviar presupuesto'}</button>` : ''}</div>
+    ${r.payUrl && canQuote ? `<div class="row">
+      <a class="btn small" href="${esc(waQuote(r))}" target="_blank">Enviar por WhatsApp</a>
+      <button class="ghost small" data-copy="${esc(r.payUrl)}">Copiar enlace</button></div>` : ''}
+    ${pending ? `<div class="row"><button class="ghost small" data-sync="${r.id}">Comprobar pago</button></div>` : ''}
+    ${attempts}`;
 }
 
 function render() {
@@ -60,16 +98,16 @@ function render() {
     (!q || [r.name, r.company, r.phone, r.email, r.origin, r.destination, r.flight, r.notes, '#' + r.id].join(' ').toLowerCase().includes(q)));
   if (upcoming) rows = rows.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
-  const count = s => all.filter(r => r.status === s).length;
+  const active = all.filter(r => r.status !== 'cancelada');
   $('stats').innerHTML = [
-    `<span class="tag pendiente">${count('pendiente')} pendientes</span>`,
-    `<span class="tag">${all.filter(r => r.status === 'pendiente' && !r.amount_eur).length} sin precio</span>`,
-    `<span class="tag pagada">${count('pagada')} pagadas</span>`,
-    `<span class="tag">${all.filter(r => r.date === today() && r.status !== 'cancelada').length} hoy</span>`
+    `<span class="tag pendiente">${active.filter(r => !r.amount_eur && r.payment_status !== 'pagado').length} sin precio</span>`,
+    `<span class="tag enlace_enviado">${active.filter(r => r.payment_status === 'enlace_enviado').length} esperando pago</span>`,
+    `<span class="tag pagada">${all.filter(r => r.payment_status === 'pagado').length} pagadas</span>`,
+    `<span class="tag">${active.filter(r => r.date === today()).length} hoy</span>`
   ].join('');
 
   $('rows').innerHTML = rows.map(r => `<tr class="${r.date < today() ? 'past' : ''}">
-    <td>${r.id}<br><small>${esc(r.created_at)}</small></td>
+    <td>${r.id}<br><small>${utc(r.created_at)}</small></td>
     <td><b>${esc(r.name)}</b>${r.company ? '<br>' + esc(r.company) : ''}<br><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a><br><small>${esc(r.email)}</small></td>
     <td>${esc(r.origin)}<br>→ ${esc(r.destination)}</td>
     <td><b>${esc(r.date)}</b><br>${esc(r.time)}</td>
@@ -77,20 +115,25 @@ function render() {
     <td>
       <select data-id="${r.id}" data-field="status">${STATUSES.map(s => `<option ${s === r.status ? 'selected' : ''}>${s}</option>`).join('')}</select>
       <input data-id="${r.id}" data-field="notes" placeholder="Notas internas" value="${esc(r.notes)}" style="margin-top:6px">
-    </td>
-    <td>
-      <span class="tag ${r.payment_status}">${esc(r.payment_status.replace('_', ' '))}</span>
-      <div class="row"><input id="a${r.id}" type="number" step="0.01" min="0" placeholder="€" value="${r.amount_eur ?? ''}"><button class="small" data-link="${r.id}">Enlace SumUp</button></div>
-      ${r.checkout_url ? `<div class="row">
-        <a class="btn ghost small" href="${esc(waLink(r))}" target="_blank">Enviar por WhatsApp</a>
-        <button class="ghost small" data-copy="${esc(r.checkout_url)}">Copiar enlace</button></div>` : ''}
       ${me.role === 'admin' ? `<div class="row"><button class="danger small" data-del="${r.id}">Eliminar</button></div>` : ''}
-    </td></tr>`).join('') || `<tr><td colspan="7">${all.length ? 'Ninguna reserva coincide con el filtro.' : 'Sin reservas todavía.'}</td></tr>`;
+    </td>
+    <td class="cobro">${cobro(r)}</td></tr>`).join('') || `<tr><td colspan="7">${all.length ? 'Ninguna reserva coincide con el filtro.' : 'Sin reservas todavía.'}</td></tr>`;
+}
+
+function renderMode(mode) {
+  $('mode').innerHTML = {
+    mock: '<div class="mode mock">🧪 <b>Modo simulación de SumUp:</b> los pagos son de prueba y no se cobra nada. Para cobrar de verdad, configura SUMUP_API_KEY y SUMUP_MERCHANT_CODE.</div>',
+    off: '<div class="mode off">⚠️ <b>SumUp sin configurar:</b> puedes enviar presupuestos, pero los clientes no podrán pagar online hasta configurar SUMUP_API_KEY y SUMUP_MERCHANT_CODE.</div>'
+  }[mode] || '';
 }
 
 async function load() {
-  try { all = await api('/api/panel/bookings'); render(); }
-  catch (e) { toast(e.message, 'error'); }
+  try {
+    const d = await api('/api/panel/bookings');
+    all = d.bookings;
+    renderMode(d.sumupMode);
+    render();
+  } catch (e) { toast(e.message, 'error'); }
 }
 
 async function update(id, body) {
@@ -104,24 +147,30 @@ $('rows').addEventListener('change', e => {
 });
 
 $('rows').addEventListener('click', async e => {
-  const t = e.target;
-  if (t.dataset.link) {
-    const id = t.dataset.link, amount = parseFloat($('a' + id).value);
-    if (!(amount > 0)) return toast('Pon primero el importe.', 'error');
+  const t = e.target, d = t.dataset;
+  if (d.quote) {
+    const amount = $('a' + d.quote).value;
+    if (!(parseFloat(amount) > 0)) return toast('Pon primero el precio.', 'error');
     t.disabled = true;
     try {
-      const d = await api('/api/panel/bookings/' + id, { method: 'PATCH', body: { amount, createLink: true } });
-      await navigator.clipboard?.writeText(d.checkoutUrl).catch(() => {});
-      toast('Enlace creado y copiado. Envíaselo al cliente por WhatsApp.');
+      await api('/api/panel/bookings/' + d.quote, { method: 'PATCH', body: { amount } });
+      const { url } = await api(`/api/panel/bookings/${d.quote}/quote`, { method: 'POST' });
+      await navigator.clipboard?.writeText(url).catch(() => {});
+      toast('Presupuesto listo y enlace copiado. Pulsa «Enviar por WhatsApp» para mandárselo.');
       await load();
     } catch (err) { toast(err.message, 'error'); t.disabled = false; }
   }
-  if (t.dataset.copy) {
-    await navigator.clipboard?.writeText(t.dataset.copy).then(() => toast('Enlace copiado'), () => toast('No se pudo copiar', 'error'));
+  if (d.copy) {
+    await navigator.clipboard?.writeText(d.copy).then(() => toast('Enlace copiado'), () => toast('No se pudo copiar', 'error'));
   }
-  if (t.dataset.del) {
-    if (!confirm(`¿Eliminar la reserva #${t.dataset.del}? No se puede deshacer.`)) return;
-    try { await api('/api/panel/bookings/' + t.dataset.del, { method: 'DELETE' }); toast('Reserva eliminada'); await load(); }
+  if (d.sync) {
+    t.disabled = true;
+    try { await api(`/api/panel/bookings/${d.sync}/sync`, { method: 'POST' }); toast('Estado actualizado'); await load(); }
+    catch (err) { toast(err.message, 'error'); t.disabled = false; }
+  }
+  if (d.del) {
+    if (!confirm(`¿Eliminar la reserva #${d.del}? No se puede deshacer.`)) return;
+    try { await api('/api/panel/bookings/' + d.del, { method: 'DELETE' }); toast('Reserva eliminada'); await load(); }
     catch (err) { toast(err.message, 'error'); }
   }
 });
