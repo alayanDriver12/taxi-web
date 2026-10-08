@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { submitBooking } from './pay.js';
+import Legal, { LEGAL_PATHS } from './Legal.jsx';
 
 const EMPTY_FORM = {
   name: '', company: '', phone: '', email: '', origin: '', destination: '',
@@ -12,16 +13,41 @@ const FORM_FIELDS = [
 const WIDE_FIELDS = new Set(['origin', 'destination', 'flight', 'sign']);
 
 // Sustituye {clave} por su valor: "© {year}" → "© 2026"
-const fill = (tpl, vars) => String(tpl ?? '').replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+export const fill = (tpl, vars) => String(tpl ?? '').replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
+
+// El idioma viaja en la URL (?lang=en) al ir a las páginas legales y volver
+const initialLang = () => (new URLSearchParams(location.search).get('lang') === 'en' ? 'EN' : 'ES');
+const withLang = (href, lang) => (lang === 'EN' ? `${href}?lang=en` : href);
 
 export default function App({ content }) {
-  const [lang, setLang] = useState('ES');
+  const [lang, setLang] = useState(initialLang);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [accepted, setAccepted] = useState(false);
   const t = content[lang];
   const img = content.images;
   const waBase = `https://wa.me/${content.contact.whatsapp}`;
+  const legalPage = LEGAL_PATHS[location.pathname.replace(/\/+$/, '')];
 
   useEffect(() => { document.documentElement.lang = lang.toLowerCase(); }, [lang]);
+
+  const footer = <Footer t={t} img={img} lang={lang} />;
+
+  if (legalPage) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A] text-[#F7F3ED] antialiased selection:bg-[#C5A46A]/30">
+        <header className="border-b border-white/[0.06]">
+          <div className="mx-auto max-w-[1440px] px-6 md:px-10 h-[72px] flex items-center justify-between">
+            <a href={withLang('/', lang)}>
+              <img src={img.logo} alt={`${t.brand.name} logo`} className="h-[44px] w-auto rounded-[10px] object-contain bg-white p-1" />
+            </a>
+            <a href={withLang('/', lang)} className="text-[11px] tracking-[0.2em] text-white/60 hover:text-white transition">← {t.footer.legal.back.toUpperCase()}</a>
+          </div>
+        </header>
+        <Legal page={legalPage} content={content} t={t} lang={lang} />
+        {footer}
+      </div>
+    );
+  }
 
   const langButton = code => (
     <button
@@ -198,6 +224,7 @@ export default function App({ content }) {
               </div>
             ))}
           </div>
+          {t.classes.vatNote && <p className="mt-6 text-[12px] text-black/50">{t.classes.vatNote}</p>}
         </div>
       </section>
 
@@ -310,19 +337,35 @@ export default function App({ content }) {
                 />
               </div>
             </div>
-            <div className="mt-8 grid md:grid-cols-[1.2fr_0.8fr] gap-3">
+            {/* Aceptación de privacidad y condiciones + información básica (primera capa, art. 13 RGPD) */}
+            <label className="mt-6 flex gap-3 items-start text-[12px] leading-relaxed text-black/70 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={accepted}
+                onChange={e => setAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[#C5A46A]"
+              />
+              <span>
+                {t.booking.acceptPrefix}{' '}
+                <a href={withLang('/privacidad', lang)} target="_blank" className="underline hover:text-black">{t.footer.legal.privacy.toLowerCase()}</a>{' '}
+                {t.booking.acceptJoin}{' '}
+                <a href={withLang('/condiciones', lang)} target="_blank" className="underline hover:text-black">{t.footer.legal.terms.toLowerCase()}</a>.
+              </span>
+            </label>
+            <p className="mt-3 text-[11px] leading-relaxed text-black/45">{fill(t.booking.privacyInfo, { owner: content.legal.owner || t.brand.name })}</p>
+            <div className="mt-6 grid sm:grid-cols-2 gap-3">
               <button
-                onClick={() => submitBooking(form)}
-                className="h-12 rounded-full bg-[#0A0A0A] text-white text-[12px] tracking-[0.22em] font-semibold flex items-center justify-center gap-2 hover:bg-black transition"
+                onClick={() => submitBooking({ ...form, privacy: accepted }, t.booking.mustAccept)}
+                className="h-12 px-4 rounded-full bg-[#0A0A0A] text-white text-[11px] md:text-[12px] tracking-[0.16em] font-semibold flex items-center justify-center gap-2 text-center leading-tight hover:bg-black transition"
               >
-                <span className="h-6 w-6 rounded-full bg-[#C5A46A] text-black grid place-items-center font-bold text-[12px]">€</span>
+                <span className="h-6 w-6 shrink-0 rounded-full bg-[#C5A46A] text-black grid place-items-center font-bold text-[12px]">€</span>
                 {t.booking.pay.toUpperCase()}
               </button>
               <a
                 href={`${waBase}?text=${encodeURIComponent(fill(t.booking.whatsappMessage, form))}`}
                 target="_blank"
                 rel="noopener"
-                className="h-12 rounded-full border border-black/15 grid place-items-center text-[12px] tracking-[0.18em] font-semibold"
+                className="h-12 px-4 rounded-full border border-black/15 flex items-center justify-center text-center leading-tight text-[11px] md:text-[12px] tracking-[0.14em] font-semibold hover:bg-black/5 transition"
               >
                 {t.booking.whatsapp.toUpperCase()}
               </a>
@@ -332,36 +375,52 @@ export default function App({ content }) {
         </div>
       </section>
 
-      {/* Pie */}
-      <footer className="bg-[#070707] border-t border-white/10">
-        <div className="mx-auto max-w-[1440px] px-6 md:px-10 py-14 flex flex-col md:flex-row justify-between gap-8">
-          <div>
-            <div className="flex items-center gap-3">
-              <img src={img.logo} alt="" className="h-10 w-auto rounded-lg bg-white p-1" />
-              <div className="serif text-[20px] leading-none">
-                {t.brand.name}
-                <br />
-                <span className="text-[11px] tracking-[0.28em] text-[#C5A46A]">{t.brand.tagline}</span>
-              </div>
-            </div>
-            <div className="mt-6 text-[13px] text-white/60 max-w-[420px]">
-              {t.footer.tagline} {t.footer.slogan}. {t.footer.description}
-            </div>
-            <div className="mt-6 serif italic text-[#C5A46A] text-[18px]">— {t.footer.firm}</div>
-          </div>
-          <div className="text-[11px] tracking-[0.2em] text-white/40 leading-relaxed">
-            {t.footer.services.map((s, i) => <div key={i}>{s}</div>)}
-            <br />
-            <span className="text-white/60">{fill(t.footer.rights, { year: new Date().getFullYear() })}</span>
-          </div>
-        </div>
-        <div className="border-t border-white/5 bg-black/40">
-          <div className="mx-auto max-w-[1440px] px-6 md:px-10 py-6 flex items-center justify-between">
-            <span className="text-[10px] tracking-[0.32em] text-white/30">{t.footer.bottomLeft}</span>
-            <span className="text-[10px] tracking-[0.2em] text-[#C5A46A]">{t.footer.bottomRight}</span>
-          </div>
-        </div>
-      </footer>
+      {footer}
     </div>
+  );
+}
+
+function Footer({ t, img, lang }) {
+  const links = [['/aviso-legal', t.footer.legal.notice], ['/privacidad', t.footer.legal.privacy], ['/cookies', t.footer.legal.cookies], ['/condiciones', t.footer.legal.terms]];
+  return (
+    <footer className="bg-[#070707] border-t border-white/10">
+      <div className="mx-auto max-w-[1440px] px-6 md:px-10 py-14 flex flex-col md:flex-row justify-between gap-8">
+        <div>
+          <div className="flex items-center gap-3">
+            <img src={img.logo} alt="" className="h-10 w-auto rounded-lg bg-white p-1" />
+            <div className="serif text-[20px] leading-none">
+              {t.brand.name}
+              <br />
+              <span className="text-[11px] tracking-[0.28em] text-[#C5A46A]">{t.brand.tagline}</span>
+            </div>
+          </div>
+          <div className="mt-6 text-[13px] text-white/60 max-w-[420px]">
+            {t.footer.tagline} {t.footer.slogan}. {t.footer.description}
+          </div>
+          <div className="mt-6 serif italic text-[#C5A46A] text-[18px]">— {t.footer.firm}</div>
+        </div>
+        <div className="text-[11px] tracking-[0.2em] text-white/40 leading-relaxed">
+          {t.footer.services.map((s, i) => <div key={i}>{s}</div>)}
+          <br />
+          <span className="text-white/60">{fill(t.footer.rights, { year: new Date().getFullYear() })}</span>
+        </div>
+      </div>
+      <div className="border-t border-white/5">
+        <div className="mx-auto max-w-[1440px] px-6 md:px-10 py-5 flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <nav className="flex flex-wrap gap-x-6 gap-y-2 text-[11px] tracking-[0.12em] text-white/60">
+            {links.map(([href, label]) => (
+              <a key={href} href={withLang(href, lang)} className="hover:text-white transition">{label}</a>
+            ))}
+          </nav>
+          <span className="text-[11px] text-white/40 max-w-[520px] md:text-right">{t.footer.legal.complaints}</span>
+        </div>
+      </div>
+      <div className="border-t border-white/5 bg-black/40">
+        <div className="mx-auto max-w-[1440px] px-6 md:px-10 py-6 flex items-center justify-between">
+          <span className="text-[10px] tracking-[0.32em] text-white/30">{t.footer.bottomLeft}</span>
+          <span className="text-[10px] tracking-[0.2em] text-[#C5A46A]">{t.footer.bottomRight}</span>
+        </div>
+      </div>
+    </footer>
   );
 }

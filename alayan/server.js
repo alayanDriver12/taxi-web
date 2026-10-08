@@ -40,6 +40,9 @@ CREATE TABLE IF NOT EXISTS bookings (
 );
 CREATE INDEX IF NOT EXISTS idx_bookings_date ON bookings(date);
 `);
+// Columnas añadidas después: se crean en BBDD ya existentes
+const bookingCols = db.prepare('PRAGMA table_info(bookings)').all().map(c => c.name);
+if (!bookingCols.includes('privacy_accepted_at')) db.exec('ALTER TABLE bookings ADD COLUMN privacy_accepted_at TEXT'); // prueba de aceptación (RGPD)
 
 const auth = createAuth(db, { secure: BASE_URL.startsWith('https://') });
 const content = createContentStore(db);
@@ -114,12 +117,13 @@ app.post('/api/bookings', limiter, async (req, res) => {
   };
   if (!d.name || !d.phone || !d.origin || !d.destination || !d.date || !d.time)
     return res.status(400).json({ error: 'Faltan campos obligatorios.' });
+  if (b.privacy !== true) return res.status(400).json({ error: 'Debes aceptar la política de privacidad y las condiciones del servicio.' });
   if (!/^\S+@\S+\.\S+$/.test(d.email)) return res.status(400).json({ error: 'Email no válido.' });
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date) || d.date < new Date().toISOString().slice(0, 10))
     return res.status(400).json({ error: 'La fecha debe ser hoy o posterior.' });
 
-  const info = db.prepare(`INSERT INTO bookings (name,company,phone,email,origin,destination,date,time,pax,luggage,flight,sign)
-    VALUES (@name,@company,@phone,@email,@origin,@destination,@date,@time,@pax,@luggage,@flight,@sign)`).run(d);
+  const info = db.prepare(`INSERT INTO bookings (name,company,phone,email,origin,destination,date,time,pax,luggage,flight,sign,privacy_accepted_at)
+    VALUES (@name,@company,@phone,@email,@origin,@destination,@date,@time,@pax,@luggage,@flight,@sign,datetime('now'))`).run(d);
   const booking = { id: info.lastInsertRowid, ...d };
 
   let checkoutUrl = null;
@@ -294,19 +298,24 @@ app.use('/panel', express.static(path.join(PANEL_DIR, 'assets'), { maxAge: '1h' 
 // ---------- Web pública ----------
 // El HTML se sirve con el contenido ya incrustado: sin parpadeo y bueno para SEO
 let indexTemplate = null;
-function renderIndex() {
+function renderIndex(pageTitle) {
   // En producción se lee una vez; en local se relee para que un `npm run build` se vea sin reiniciar
   if (!indexTemplate || process.env.NODE_ENV !== 'production') indexTemplate = fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf8');
   const c = content.get();
   const json = JSON.stringify(c).replace(/</g, String.fromCharCode(92) + 'u003c'); // "<" escapado: un texto no puede cerrar el <script>
+  const title = pageTitle ? `${pageTitle} · ${c.ES.brand.name}` : c.seo.title;
   return indexTemplate
-    .replace(/<title>[^<]*<\/title>/, `<title>${esc(c.seo.title)}</title>`)
+    .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)
     .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${esc(c.seo.description)}">`)
     .replace('<!--content-->', `<script>window.__ALAYAN_CONTENT__=${json}</script>`);
 }
 
-app.get(['/', '/index.html'], (req, res) => {
-  try { res.set('Cache-Control', 'no-cache').type('html').send(renderIndex()); }
+// Páginas legales: las pinta la misma app React según la ruta (web/src/Legal.jsx)
+const LEGAL_PAGES = { '/aviso-legal': 'notice', '/privacidad': 'privacy', '/cookies': 'cookies', '/condiciones': 'terms' };
+
+app.get(['/', '/index.html', ...Object.keys(LEGAL_PAGES)], (req, res) => {
+  const legalKey = LEGAL_PAGES[req.path.replace(/[/]+$/, '')];
+  try { res.set('Cache-Control', 'no-cache').type('html').send(renderIndex(legalKey && content.get().ES.footer.legal[legalKey])); }
   catch (e) {
     if (e.code !== 'ENOENT') throw e;
     res.status(503).send('Falta compilar la web: ejecuta <code>npm run build</code>.');

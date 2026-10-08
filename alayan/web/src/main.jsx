@@ -1,5 +1,14 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+// Fuentes servidas desde nuestro servidor (no desde Google): sin enviar la IP del visitante a terceros
+import '@fontsource/inter/300.css';
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/cormorant-garamond/400.css';
+import '@fontsource/cormorant-garamond/500.css';
+import '@fontsource/cormorant-garamond/600.css';
+import '@fontsource/cormorant-garamond/700.css';
 import App from './App.jsx';
 import './index.css';
 

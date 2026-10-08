@@ -39,6 +39,7 @@ fieldset.group legend{padding:0 6px;color:var(--gold);font-size:13px;font-weight
 .images .card img{width:100%;height:150px;object-fit:contain;background:#000;border-radius:8px;margin-bottom:10px}
 .images .row{flex-wrap:wrap}
 .danger-zone{margin-top:28px;border-color:#6b222288}
+.warn{background:#6a542033;border:1px solid #C5A46A66;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:13px}
 #savebar{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;justify-content:center;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px));background:#151515f5;border-top:1px solid var(--gold)}
 body.has-savebar main{padding-bottom:90px}
 </style></head><body>
@@ -62,7 +63,7 @@ body.has-savebar main{padding-bottom:90px}
 const $ = id => document.getElementById(id);
 
 const SECTION_NAMES = {
-  general: 'General y SEO', images: 'Imágenes',
+  legal: 'Datos legales', general: 'General y SEO', images: 'Imágenes',
   brand: 'Marca', nav: 'Menú', hero: 'Portada', exp: 'Experiencia', slogans: 'Lemas', fleet: 'Flota',
   classes: 'Clases y precios', drivers: 'Conductores', destinations: 'Destinos', services: 'Servicios',
   booking: 'Reserva', footer: 'Pie de página'
@@ -82,8 +83,22 @@ const KEY_LABELS = {
   destination: 'Destino', date: 'Fecha', time: 'Hora', pax: 'Pasajeros', luggage: 'Maletas', flight: 'Vuelo', sign: 'Cartel',
   amount: 'Importe', pay: 'Botón pagar', whatsapp: 'Botón WhatsApp', whatsappMessage: 'Mensaje de WhatsApp',
   secure: 'Texto de pago seguro', slogan: 'Eslogan', description: 'Descripción', firm: 'Firma', rights: 'Copyright',
-  bottomLeft: 'Barra inferior (izquierda)', bottomRight: 'Barra inferior (derecha)'
+  bottomLeft: 'Barra inferior (izquierda)', bottomRight: 'Barra inferior (derecha)',
+  vatNote: 'Nota de IVA bajo los precios', acceptPrefix: 'Casilla: texto inicial', acceptJoin: 'Casilla: texto entre enlaces',
+  mustAccept: 'Aviso si no marca la casilla', privacyInfo: 'Información básica de privacidad', legal: 'Enlaces legales',
+  notice: 'Aviso legal', privacy: 'Política de privacidad', cookies: 'Política de cookies', terms: 'Condiciones del servicio',
+  complaints: 'Aviso de hojas de reclamaciones', back: 'Enlace «volver»'
 };
+const LEGAL_FIELDS = [
+  ['owner', 'Titular', 'Nombre y apellidos si es autónomo, o razón social si es sociedad (ej: Alayan Driver S.L.).'],
+  ['nif', 'NIF / CIF', ''],
+  ['address', 'Domicilio', 'Dirección completa: calle, número, código postal, ciudad.'],
+  ['email', 'Email de contacto', 'Se publica en los textos legales y es donde llegarán las peticiones de protección de datos.'],
+  ['phone', 'Teléfono', ''],
+  ['registry', 'Datos del Registro Mercantil', 'Solo si es sociedad (ej: Registro Mercantil de Sevilla, tomo X, folio Y, hoja SE-Z). Si es autónomo, déjalo vacío.'],
+  ['license', 'Autorización de transporte', 'Número de autorización VTC o licencia con la que se presta el servicio.']
+];
+const LEGAL_REQUIRED = ['owner', 'nif', 'address', 'email', 'phone', 'license'];
 const PATH_LABELS = {
   'brand.name': 'Nombre de la marca', 'nav.book': 'Botón reservar', 'hero.badge': 'Etiqueta sobre la portada',
   'fleet.ford': 'Coche 1 (imagen «Coche 1»)', 'fleet.tesla': 'Coche 2 (imagen «Coche 2»)', 'fleet.tesla.badge': 'Etiqueta en la esquina',
@@ -96,7 +111,9 @@ const HINTS = {
   'fleet.tesla.badge': 'Vacío = no se muestra.',
   'footer.bottomLeft': 'Vacío = no se muestra.',
   'footer.rights': '{year} se sustituye por el año actual.',
-  'booking.whatsappMessage': 'Se rellena con lo que escriba el cliente: {origin} {destination} {date} {time} {pax} {luggage} {flight} {sign}'
+  'booking.whatsappMessage': 'Se rellena con lo que escriba el cliente: {origin} {destination} {date} {time} {pax} {luggage} {flight} {sign}',
+  'booking.privacyInfo': '{owner} se sustituye por el titular de «Datos legales». Obligatoria por el RGPD: si la cambias, que siga diciendo responsable, finalidad, legitimación, destinatarios y derechos.',
+  'footer.legal.note': 'Solo se muestra en inglés, encima de los textos legales (que están en español).'
 };
 
 let defaults, loaded, state, savedJson = '', current = 'general';
@@ -121,7 +138,7 @@ const tplAt = path => path.reduce((t, k) => (Array.isArray(t) ? t[0] : t?.[k]), 
 const pathKey = path => path.reduce((s, k) => (typeof k === 'number' ? s + '[]' : s ? s + '.' + k : k), '');
 const labelFor = path => PATH_LABELS[pathKey(path)] || KEY_LABELS[path.at(-1)] || path.at(-1);
 const blank = t => Array.isArray(t) ? [] : isObj(t) ? Object.fromEntries(Object.keys(t).map(k => [k, blank(t[k])])) : typeof t === 'boolean' ? false : '';
-const texts = s => ({ contact: s.contact, seo: s.seo, ES: s.ES, EN: s.EN });
+const texts = s => ({ contact: s.contact, seo: s.seo, legal: s.legal, ES: s.ES, EN: s.EN });
 
 // ES y EN deben tener listas del mismo tamaño para editarlas en paralelo
 function align(es, en, tpl) {
@@ -235,8 +252,19 @@ function renderGeneral() {
     single('Descripción', state.seo.description, v => { state.seo.description = v; }, { hint: 'El texto bajo el título en Google. Ideal 140-160 caracteres.', long: true }),
     h('div', { class: 'card danger-zone' },
       h('h2', {}, 'Restaurar textos originales'),
-      h('p', { class: 'muted' }, 'Vuelve a poner todos los textos, el WhatsApp y el SEO como venían de fábrica. Las imágenes no se tocan.'),
+      h('p', { class: 'muted' }, 'Vuelve a poner todos los textos, el WhatsApp y el SEO como venían de fábrica. Las imágenes y los datos legales no se tocan.'),
       h('button', { type: 'button', class: 'danger', onclick: resetAll }, 'Restaurar todo'))
+  ];
+}
+
+const missingLegal = () => LEGAL_REQUIRED.filter(k => !String(state.legal[k] || '').trim());
+
+function renderLegal() {
+  return [
+    h('p', { class: 'muted' }, 'Son obligatorios por ley (LSSI y RGPD). Aparecen en el aviso legal, la política de privacidad y las condiciones del servicio. Mientras falte alguno, esas páginas lo muestran como «PENDIENTE».'),
+    LEGAL_FIELDS.map(([key, label, hint]) => single(label, state.legal[key], v => { state.legal[key] = v; }, { hint })),
+    h('p', {}, 'Ver: ',
+      ['/aviso-legal', '/privacidad', '/cookies', '/condiciones'].flatMap((href, i) => [i ? ' · ' : '', h('a', { href, target: '_blank' }, href)]))
   ];
 }
 
@@ -261,12 +289,16 @@ function renderSection() {
   $('side').replaceChildren(...Object.entries(SECTION_NAMES).map(([key, name]) =>
     h('button', { type: 'button', class: key === current ? 'on' : '', onclick: () => { current = key; renderSection(); scrollTo(0, 0); } }, name)));
 
-  const isText = !['general', 'images'].includes(current);
+  const own = { legal: renderLegal, general: renderGeneral, images: renderImages }[current];
+  const missing = missingLegal();
   $('panel').replaceChildren(...[
+    missing.length && h('div', { class: 'warn' },
+      `⚠️ Faltan datos legales obligatorios (${missing.map(k => LEGAL_FIELDS.find(f => f[0] === k)[1]).join(', ')}). `,
+      current !== 'legal' && h('a', { href: '#', onclick: e => { e.preventDefault(); current = 'legal'; renderSection(); } }, 'Completarlos')),
     h('div', { class: 'section-title' }, h('h2', {}, SECTION_NAMES[current])),
-    isText && h('div', { class: 'cols' }, h('span', {}, 'ESPAÑOL'), h('span', {}, 'ENGLISH')),
-    current === 'general' ? renderGeneral() : current === 'images' ? renderImages() : renderNode([current])
-  ].flat().filter(Boolean));
+    !own && h('div', { class: 'cols' }, h('span', {}, 'ESPAÑOL'), h('span', {}, 'ENGLISH')),
+    own ? own() : renderNode([current])
+  ].flat(Infinity).filter(Boolean));
 }
 
 // ---------- acciones ----------

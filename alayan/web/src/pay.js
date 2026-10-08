@@ -1,8 +1,9 @@
 // Envía la reserva al backend y redirige al checkout de SumUp
-export async function submitBooking(f) {
+export async function submitBooking(f, mustAcceptMsg) {
   const need = ['name', 'phone', 'email', 'origin', 'destination', 'date', 'time'];
   const missing = need.filter(k => !String(f[k] || '').trim());
   if (missing.length) return alert('Por favor completa los campos obligatorios (*).');
+  if (!f.privacy) return alert(mustAcceptMsg);
   try {
     const r = await fetch('/api/bookings', {
       method: 'POST',

@@ -9,6 +9,16 @@ module.exports = {
     description: 'Transfers privados en Sevilla y toda Andalucía. Aeropuertos, estaciones, hoteles y eventos.'
   },
   images: { logo: '/img/logo.jpg', hero: '/img/portada.jpg', ford: '/img/ford.jpg', tesla: '/img/tesla.jpg' },
+  // Datos del titular para aviso legal, privacidad y condiciones (obligatorios por LSSI y RGPD)
+  legal: {
+    owner: '',     // nombre y apellidos (autónomo) o razón social (sociedad)
+    nif: '',
+    address: '',   // domicilio completo
+    email: '',
+    phone: '',
+    registry: '',  // datos del Registro Mercantil, solo si es sociedad
+    license: ''    // autorización VTC / licencia con la que presta el servicio
+  },
 
   ES: {
     brand: { name: 'ALAYAN DRIVER', tagline: 'TRANSFER EN ANDALUCÍA' },
@@ -48,6 +58,7 @@ module.exports = {
       subtitle: 'Mismo conductor profesional, distinto nivel de confort.',
       popular: 'MÁS RESERVADO',
       book: 'RESERVAR',
+      vatNote: 'Precios con IVA incluido. El precio final se confirma antes del pago.',
       cards: [
         { name: 'Económico', price: 'Desde 35€', features: ['Vehículo confort', '1-3 pasajeros', 'Aeropuerto / Estación', 'Tracking vuelo incluido'], popular: false },
         { name: 'Confort', price: 'Desde 55€', features: ['Ford Alayan híbrido', 'Agua + prensa', 'Cartel bienvenida', 'Cancelación 24h gratis'], popular: true },
@@ -109,7 +120,11 @@ module.exports = {
       pay: 'Pagar con SumUp',
       whatsapp: 'Consultar por WhatsApp',
       whatsappMessage: 'Hola Alayan, quiero reservar: {origin} -> {destination} el {date} a las {time}. Pax:{pax} Maletas:{luggage} Vuelo:{flight} Cartel:{sign}',
-      secure: 'Pago 100% seguro vía SumUp • Encriptado • Factura incluida'
+      secure: 'Pago 100% seguro vía SumUp • Encriptado • Factura incluida',
+      acceptPrefix: 'He leído y acepto la',
+      acceptJoin: 'y las',
+      mustAccept: 'Para enviar la reserva debes aceptar la política de privacidad y las condiciones del servicio.',
+      privacyInfo: 'Responsable: {owner}. Finalidad: gestionar tu reserva y su pago. Legitimación: ejecución del contrato. Destinatarios: SumUp (pagos) y nuestros proveedores tecnológicos; no cedemos tus datos salvo obligación legal. Derechos: acceso, rectificación, supresión y demás, como se explica en la política de privacidad.'
     },
     footer: {
       tagline: 'TU DESTINO, NUESTRA PRIORIDAD.',
@@ -119,7 +134,16 @@ module.exports = {
       services: ['AEROPUERTOS SEVILLA MÁLAGA JEREZ Y MÁS', 'ESTACIONES TREN AVE', 'HOTELES Y RESORTS', 'EVENTOS SOCIALES Y EMPRESARIALES', 'VIAJES PRIVADOS POR TODA ANDALUCÍA'],
       rights: '© {year} ALAYAN DRIVER - TRANSFER EN ANDALUCÍA. Todos los derechos reservados.',
       bottomLeft: '',
-      bottomRight: 'ALAYAN • SEVILLA'
+      bottomRight: 'ALAYAN • SEVILLA',
+      legal: {
+        notice: 'Aviso legal',
+        privacy: 'Política de privacidad',
+        cookies: 'Política de cookies',
+        terms: 'Condiciones del servicio',
+        complaints: 'Existen hojas de quejas y reclamaciones a disposición de las personas consumidoras y usuarias.',
+        back: 'Volver a la web',
+        note: ''
+      }
     }
   },
 
@@ -161,6 +185,7 @@ module.exports = {
       subtitle: 'Same professional driver, different comfort level.',
       popular: 'MOST BOOKED',
       book: 'BOOK',
+      vatNote: 'Prices include VAT. The final price is confirmed before payment.',
       cards: [
         { name: 'Economy', price: 'From €35', features: ['Comfort vehicle', '1-3 passengers', 'Airport / Station', 'Flight tracking included'], popular: false },
         { name: 'Comfort', price: 'From €55', features: ['Ford Alayan hybrid', 'Water + press', 'Welcome sign', 'Free cancellation 24h'], popular: true },
@@ -222,7 +247,11 @@ module.exports = {
       pay: 'Pay with SumUp',
       whatsapp: 'Ask on WhatsApp',
       whatsappMessage: 'Hello Alayan, I would like to book: {origin} -> {destination} on {date} at {time}. Pax:{pax} Bags:{luggage} Flight:{flight} Sign:{sign}',
-      secure: '100% secure payment via SumUp • Encrypted • Invoice included'
+      secure: '100% secure payment via SumUp • Encrypted • Invoice included',
+      acceptPrefix: 'I have read and accept the',
+      acceptJoin: 'and the',
+      mustAccept: 'To send your booking you must accept the privacy policy and the terms of service.',
+      privacyInfo: 'Controller: {owner}. Purpose: managing your booking and its payment. Legal basis: performance of the contract. Recipients: SumUp (payments) and our technology providers; we do not share your data unless required by law. Rights: access, rectification, erasure and others, as explained in the privacy policy.'
     },
     footer: {
       tagline: 'YOUR DESTINATION, OUR PRIORITY.',
@@ -232,7 +261,16 @@ module.exports = {
       services: ['AIRPORTS SEVILLE MALAGA JEREZ & MORE', 'AVE TRAIN STATIONS', 'HOTELS & RESORTS', 'SOCIAL & CORPORATE EVENTS', 'PRIVATE TRIPS ALL OVER ANDALUSIA'],
       rights: '© {year} ALAYAN DRIVER - TRANSFER IN ANDALUSIA. All rights reserved.',
       bottomLeft: '',
-      bottomRight: 'ALAYAN • SEVILLE'
+      bottomRight: 'ALAYAN • SEVILLE',
+      legal: {
+        notice: 'Legal notice',
+        privacy: 'Privacy policy',
+        cookies: 'Cookie policy',
+        terms: 'Terms of service',
+        complaints: 'Official complaint forms (hojas de quejas y reclamaciones) are available to consumers on request.',
+        back: 'Back to the website',
+        note: 'Our legal texts are published in Spanish, the language of the contract. If you need help understanding them, write to us.'
+      }
     }
   }
 };

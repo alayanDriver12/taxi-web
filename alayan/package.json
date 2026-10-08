@@ -18,6 +18,8 @@
     "helmet": "^7.1.0"
   },
   "devDependencies": {
+    "@fontsource/cormorant-garamond": "^5.1.0",
+    "@fontsource/inter": "^5.1.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",

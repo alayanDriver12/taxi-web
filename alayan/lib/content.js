@@ -77,14 +77,15 @@ function createContentStore(db) {
       ...get(),
       contact: { whatsapp },
       seo: sanitize(input.seo, defaults.seo),
+      legal: sanitize(input.legal, defaults.legal),
       ES: sanitize(input.ES, defaults.ES),
       EN: sanitize(input.EN, defaults.EN)
     }, username);
   }
 
   function resetTexts(username) {
-    const { images } = get();
-    return write({ ...defaults, images }, username);
+    const { images, legal } = get(); // imágenes y datos del titular no son «textos»: se conservan
+    return write({ ...defaults, images, legal }, username);
   }
 
   function setImage(slot, url, username) {
