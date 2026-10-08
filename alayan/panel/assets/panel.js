@@ -5,7 +5,8 @@ async function api(url, { method = 'GET', body, file } = {}) {
   const opts = { method, headers: {} };
   if (file) { opts.body = file; opts.headers['Content-Type'] = file.type || 'application/octet-stream'; }
   else if (body !== undefined) { opts.body = JSON.stringify(body); opts.headers['Content-Type'] = 'application/json'; }
-  const r = await fetch(url, opts);
+  // URL absoluta: si se abrió el panel como http://usuario:clave@host/, una relativa haría fallar fetch()
+  const r = await fetch(location.origin + url, opts);
   if (r.status === 401 && !url.startsWith('/api/auth/login')) {
     location.href = '/login?next=' + encodeURIComponent(location.pathname);
     throw new Error('La sesión ha caducado.');
