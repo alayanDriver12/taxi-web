@@ -54,6 +54,7 @@ async function initPanel(active) {
     ['web', '/admin', 'Contenido web', ['admin']],
     ['tarifas', '/admin/tarifas', 'Tarifas', ['admin']],
     ['flota', '/admin/flota', 'Flota', ['admin']],
+    ['empresas', '/admin/empresas', 'Empresas', ['admin']],
     ['usuarios', '/admin/usuarios', 'Usuarios', ['admin']]
   ].filter(l => l[3].includes(me.role));
 

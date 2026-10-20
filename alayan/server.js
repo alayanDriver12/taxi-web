@@ -61,6 +61,15 @@ if (!bookingCols.includes('route_mode')) db.exec("ALTER TABLE bookings ADD COLUM
 if (!bookingCols.includes('destination_id')) db.exec('ALTER TABLE bookings ADD COLUMN destination_id TEXT');
 if (!bookingCols.includes('extras')) db.exec('ALTER TABLE bookings ADD COLUMN extras TEXT'); // JSON: sillas, movilidad reducida…
 if (!bookingCols.includes('source')) db.exec("ALTER TABLE bookings ADD COLUMN source TEXT NOT NULL DEFAULT 'web'"); // web | panel (creada a mano)
+if (!bookingCols.includes('company_id')) db.exec('ALTER TABLE bookings ADD COLUMN company_id INTEGER'); // reserva de un hotel/empresa (a cuenta)
+// Hoteles y empresas que reservan para sus clientes con un enlace privado (sin registrarse) y pagan después
+db.exec(`CREATE TABLE IF NOT EXISTS companies (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL, token TEXT NOT NULL UNIQUE,
+  contact TEXT, email TEXT, phone TEXT, notes TEXT,
+  active INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)`);
 if (!bookingCols.includes('tariff')) db.exec('ALTER TABLE bookings ADD COLUMN tariff TEXT'); // T1 | T2 si el precio es automático
 
 // Conservación (política de privacidad, apartado 4): las solicitudes que no llegaron a contratarse
@@ -140,8 +149,9 @@ const EXTRAS = ['booster', 'baby', 'child', 'pmr', 'other'];
 //  route   → Sevilla ↔ destino de la tabla, precio por km → paga al momento
 //  custom  → trayecto libre                              → presupuesto (el admin pone el precio)
 // El precio lo calcula siempre el servidor (pricing.quote); lo que mande el navegador se ignora.
-app.post('/api/bookings', limiter, async (req, res) => {
-  const b = req.body || {};
+// Valida y arma una reserva a partir del formulario. Devuelve { d, q } (q = precio automático o null) o { error }.
+// emailRequired: los hoteles pueden reservar para un huésped sin email.
+function buildBooking(b, { emailRequired = true } = {}) {
   const mode = ['airport', 'route', 'custom'].includes(b.mode) ? b.mode : 'custom';
   const extras = Object.fromEntries(EXTRAS.filter(k => b.extras?.[k] === true).map(k => [k, true]));
   if (extras.other) extras.otherText = clean(b.extrasOther, 200);
@@ -154,12 +164,12 @@ app.post('/api/bookings', limiter, async (req, res) => {
     route_mode: mode, destination_id: null, extras: Object.keys(extras).length ? JSON.stringify(extras) : null,
     amount_eur: null, tariff: null
   };
-  if (!d.name || !d.phone || !d.date || !d.time) return res.status(400).json({ error: 'Faltan campos obligatorios.' });
-  if (b.privacy !== true) return res.status(400).json({ error: 'Debes aceptar la política de privacidad y las condiciones del servicio.' });
-  if (!/^\S+@\S+\.\S+$/.test(d.email)) return res.status(400).json({ error: 'Email no válido.' });
+  if (!d.name || !d.phone || !d.date || !d.time) return { error: 'Faltan campos obligatorios.' };
+  if (b.privacy !== true) return { error: 'Debes aceptar la política de privacidad y las condiciones del servicio.' };
+  if ((emailRequired || d.email) && !/^\S+@\S+\.\S+$/.test(d.email)) return { error: 'Email no válido.' };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date) || d.date < new Date().toISOString().slice(0, 10))
-    return res.status(400).json({ error: 'La fecha debe ser hoy o posterior.' });
-  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.time)) return res.status(400).json({ error: 'Hora no válida.' });
+    return { error: 'La fecha debe ser hoy o posterior.' };
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.time)) return { error: 'Hora no válida.' };
 
   const p = pricing.get();
   const at = (place, addr) => (addr ? `${place} — ${addr}` : place);
@@ -167,7 +177,7 @@ app.post('/api/bookings', limiter, async (req, res) => {
   let q;
   try {
     q = pricing.quote({ mode, destinationId: clean(b.destinationId, 80), pax: d.pax, pmr: !!extras.pmr, extras, date: d.date, time: d.time });
-  } catch (e) { return res.status(400).json({ error: e.message }); }
+  } catch (e) { return { error: e.message }; }
 
   if (mode === 'airport') {
     const toAirport = b.direction === 'toAirport';
@@ -178,19 +188,47 @@ app.post('/api/bookings', limiter, async (req, res) => {
     d.destination_id = q.destination.id;
   } else {
     d.origin = clean(b.origin); d.destination = clean(b.destination);
-    if (!d.origin || !d.destination) return res.status(400).json({ error: 'Faltan campos obligatorios.' });
+    if (!d.origin || !d.destination) return { error: 'Faltan campos obligatorios.' };
   }
   if (q) { d.amount_eur = q.amount; d.tariff = q.tariff; }
+  return { d, q };
+}
 
-  const info = db.prepare(`INSERT INTO bookings (name,company,phone,email,origin,destination,date,time,pax,luggage,flight,sign,lang,
-      route_mode,destination_id,extras,amount_eur,tariff,privacy_accepted_at)
-    VALUES (@name,@company,@phone,@email,@origin,@destination,@date,@time,@pax,@luggage,@flight,@sign,@lang,
-      @route_mode,@destination_id,@extras,@amount_eur,@tariff,datetime('now'))`).run(d);
-  const id = info.lastInsertRowid;
+const insertBooking = db.prepare(`INSERT INTO bookings (name,company,phone,email,origin,destination,date,time,pax,luggage,flight,sign,lang,
+    route_mode,destination_id,extras,amount_eur,tariff,privacy_accepted_at,company_id,source,payment_status)
+  VALUES (@name,@company,@phone,@email,@origin,@destination,@date,@time,@pax,@luggage,@flight,@sign,@lang,
+    @route_mode,@destination_id,@extras,@amount_eur,@tariff,datetime('now'),@company_id,@source,@payment_status)`);
+
+app.post('/api/bookings', limiter, async (req, res) => {
+  const { d, q, error } = buildBooking(req.body || {});
+  if (error) return res.status(400).json({ error });
+  const id = insertBooking.run({ ...d, company_id: null, source: 'web', payment_status: 'sin_pago' }).lastInsertRowid;
   // Con precio automático se crea ya el enlace de pago y el cliente va directo a pagar
   const payUrl = q ? payments.ensureQuote(id) : null;
   res.status(201).json({ id, payUrl, amount: d.amount_eur, tariff: d.tariff });
   notifier.bookingReceived(db.prepare('SELECT * FROM bookings WHERE id=?').get(id)).catch(e => console.error(e));
+});
+
+// ---------- Hoteles y empresas: reservan con su enlace privado (/empresa/<token>) y pagan después ----------
+const companyByToken = db.prepare('SELECT * FROM companies WHERE token=? AND active=1');
+const companyFrom = (req, res) => {
+  const c = /^[A-Za-z0-9_-]{16,64}$/.test(req.params.token) ? companyByToken.get(req.params.token) : null;
+  if (!c) res.status(404).json({ error: 'Enlace no válido o desactivado.' });
+  return c;
+};
+app.get('/api/empresa/:token', limiter, (req, res) => {
+  const c = companyFrom(req, res);
+  if (c) res.set('Cache-Control', 'no-store').json({ name: c.name });
+});
+app.post('/api/empresa/:token/bookings', limiter, async (req, res) => {
+  const c = companyFrom(req, res);
+  if (!c) return;
+  const { d, error } = buildBooking(req.body || {}, { emailRequired: false });
+  if (error) return res.status(400).json({ error });
+  // A cuenta de la empresa: sin enlace de pago; se cobra después (resumen mensual en /admin/empresas)
+  const id = insertBooking.run({ ...d, company: c.name, company_id: c.id, source: 'empresa', payment_status: 'a_cuenta' }).lastInsertRowid;
+  res.status(201).json({ id, amount: d.amount_eur, tariff: d.tariff });
+  notifier.companyBooking(db.prepare('SELECT * FROM bookings WHERE id=?').get(id), c).catch(e => console.error(e));
 });
 
 // Precio orientativo para la web (el que vale es el que calcula la reserva)
@@ -300,8 +338,67 @@ panel.use(auth.requireApi()); // cualquier usuario con sesión: admin o gestor
 const adminOnly = auth.requireApi('admin');
 
 // Reservas
+// ---------- Empresas (hoteles, agencias…): alta, enlace privado y resumen mensual ----------
+const newCompanyToken = () => crypto.randomBytes(16).toString('base64url'); // 22 caracteres, no adivinable
+const companyFields = b => ({
+  name: clean(b.name, 120), contact: clean(b.contact, 120), email: clean(b.email, 120),
+  phone: clean(b.phone, 30), notes: clean(b.notes, 1000)
+});
+const companyView = c => ({ ...c, active: !!c.active, url: `${BASE_URL}/empresa/${c.token}` });
+panel.get('/companies', adminOnly, (req, res) => {
+  const rows = db.prepare(`SELECT c.*,
+      (SELECT COUNT(*) FROM bookings b WHERE b.company_id=c.id) AS bookings,
+      (SELECT COUNT(*) FROM bookings b WHERE b.company_id=c.id AND b.payment_status='a_cuenta' AND b.status!='cancelada') AS pending,
+      (SELECT COALESCE(SUM(amount_eur),0) FROM bookings b WHERE b.company_id=c.id AND b.payment_status='a_cuenta' AND b.status!='cancelada') AS pending_eur
+    FROM companies c ORDER BY c.active DESC, c.name`).all();
+  res.json(rows.map(companyView));
+});
+panel.post('/companies', adminOnly, (req, res) => {
+  const f = companyFields(req.body || {});
+  if (!f.name) return res.status(400).json({ error: 'Pon el nombre del hotel o empresa.' });
+  if (f.email && !/^\S+@\S+\.\S+$/.test(f.email)) return res.status(400).json({ error: 'Email no válido.' });
+  const id = db.prepare('INSERT INTO companies (name,contact,email,phone,notes,token) VALUES (@name,@contact,@email,@phone,@notes,@token)')
+    .run({ ...f, token: newCompanyToken() }).lastInsertRowid;
+  res.status(201).json(companyView(db.prepare('SELECT * FROM companies WHERE id=?').get(id)));
+});
+panel.patch('/companies/:id', adminOnly, (req, res) => {
+  const cur = db.prepare('SELECT * FROM companies WHERE id=?').get(Number(req.params.id));
+  if (!cur) return res.sendStatus(404);
+  const b = req.body || {};
+  const f = { ...cur, ...Object.fromEntries(Object.entries(companyFields(b)).filter(([k]) => k in b)) };
+  if (!f.name) return res.status(400).json({ error: 'Pon el nombre del hotel o empresa.' });
+  if (f.email && !/^\S+@\S+\.\S+$/.test(f.email)) return res.status(400).json({ error: 'Email no válido.' });
+  if (typeof b.active === 'boolean') f.active = b.active ? 1 : 0;
+  if (b.newLink === true) f.token = newCompanyToken(); // el enlace anterior deja de funcionar
+  db.prepare('UPDATE companies SET name=@name,contact=@contact,email=@email,phone=@phone,notes=@notes,active=@active,token=@token WHERE id=@id').run(f);
+  res.json(companyView(db.prepare('SELECT * FROM companies WHERE id=?').get(cur.id)));
+});
+// Reservas de una empresa en un mes (por fecha del viaje) para cobrar o facturar
+panel.get('/companies/:id/month', adminOnly, (req, res) => {
+  const month = /^\d{4}-\d{2}$/.test(req.query.month) ? req.query.month : new Date().toISOString().slice(0, 7);
+  const rows = db.prepare(`SELECT id,name,phone,origin,destination,date,time,pax,amount_eur,status,payment_status,paid_at
+    FROM bookings WHERE company_id=? AND substr(date,1,7)=? ORDER BY date,time`).all(Number(req.params.id), month);
+  const active = rows.filter(r => r.status !== 'cancelada');
+  res.json({
+    month, bookings: rows,
+    total: active.reduce((s, r) => s + (r.amount_eur || 0), 0),
+    pending: active.filter(r => r.payment_status === 'a_cuenta').reduce((s, r) => s + (r.amount_eur || 0), 0),
+    withoutPrice: active.filter(r => !(r.amount_eur > 0)).length
+  });
+});
+// Marca como cobradas las reservas a cuenta de ese mes (no las canceladas ni las que no tienen precio)
+panel.post('/companies/:id/settle', adminOnly, (req, res) => {
+  const month = /^\d{4}-\d{2}$/.test(req.body?.month) ? req.body.month : null;
+  if (!month) return res.status(400).json({ error: 'Mes no válido.' });
+  const r = db.prepare(`UPDATE bookings SET payment_status='pagado', paid_at=datetime('now')
+    WHERE company_id=? AND substr(date,1,7)=? AND payment_status='a_cuenta' AND status!='cancelada' AND amount_eur>0`)
+    .run(Number(req.params.id), month);
+  res.json({ settled: r.changes });
+});
+
 panel.get('/bookings', (req, res) => {
-  const rows = db.prepare('SELECT * FROM bookings ORDER BY id DESC LIMIT 500').all();
+  const rows = db.prepare(`SELECT b.*, c.name AS company_name FROM bookings b LEFT JOIN companies c ON c.id=b.company_id
+    ORDER BY b.id DESC LIMIT 500`).all();
   const pays = payments.byBooking(), mails = mailer.byBooking();
   res.json({
     sumupMode: sumup.mode,
@@ -364,6 +461,8 @@ panel.patch('/bookings/:id', (req, res) => {
   }
   if (['pendiente','pagada','confirmada','cancelada'].includes(status)) db.prepare('UPDATE bookings SET status=? WHERE id=?').run(status, id);
   if (notes !== undefined) db.prepare('UPDATE bookings SET notes=? WHERE id=?').run(clean(notes, 1000), id);
+  // Reserva de empresa (a cuenta) cobrada a mano: transferencia, factura pagada…
+  if (req.body?.settled === true && cur.payment_status === 'a_cuenta') db.prepare("UPDATE bookings SET payment_status='pagado', paid_at=datetime('now') WHERE id=?").run(id);
   res.json({ ok: true });
 });
 
@@ -527,6 +626,7 @@ app.get('/admin', auth.requirePage('admin'), panelPage('web.html'));
 app.get('/admin/usuarios', auth.requirePage('admin'), panelPage('usuarios.html'));
 app.get('/admin/tarifas', auth.requirePage('admin'), panelPage('tarifas.html'));
 app.get('/admin/flota', auth.requirePage('admin'), panelPage('flota.html'));
+app.get('/admin/empresas', auth.requirePage('admin'), panelPage('empresas.html'));
 app.use('/panel', express.static(path.join(PANEL_DIR, 'assets'), { maxAge: '1h' }));
 
 // ---------- Web pública ----------
@@ -704,6 +804,12 @@ app.get(['/guia', '/guide'], (req, res) => {
 });
 
 // Página de pago (la pinta React: web/src/Pay.jsx). Privada: que no la indexe nadie.
+// Página de reservas de una empresa (enlace privado, sin registro). La pinta React (web/src/Account.jsx).
+app.get('/empresa/:token', (req, res) => {
+  res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' });
+  sendIndex(req, res, { pageTitle: 'Reservas de empresa', ssr: false });
+});
+
 app.get('/pago/:token', (req, res) => {
   res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' });
   sendIndex(req, res, { pageTitle: content.get().ES.payment.title, ssr: false });

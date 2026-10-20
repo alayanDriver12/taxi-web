@@ -1,6 +1,6 @@
 // Envía la solicitud de reserva. Devuelve { id } o lanza un Error con el mensaje del servidor.
-export async function sendBooking(data) {
-  const r = await fetch('/api/bookings', {
+export async function sendBooking(data, url = '/api/bookings') {
+  const r = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data)

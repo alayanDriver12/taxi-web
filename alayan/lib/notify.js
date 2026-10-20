@@ -149,7 +149,41 @@ function createNotifier({ content, mailer, payments, baseUrl, notifyEmail }) {
     ], b);
   }
 
-  return { KINDS, message, emailClient, whatsappUrl, bookingReceived, bookingPaid };
+  // Reserva de un hotel o empresa (a cuenta): confirmación a la empresa y aviso a Alayan
+  async function companyBooking(b, company) {
+    const t = content.get().ES, p = t.payment;
+    const price = b.amount_eur > 0 ? money(b.amount_eur, 'ES') : 'a presupuesto (os lo confirmamos)';
+    if (company.email) {
+      const card = summaryCard([
+        ['Huésped', `${b.name} · ${b.phone}`],
+        [p.route, `${b.origin} → ${b.destination}`],
+        [p.when, `${longDate(b.date, 'ES')} · ${b.time}`],
+        [p.pax, `${b.pax} · ${p.luggage}: ${b.luggage}`],
+        [p.flight, b.flight],
+        [t.booking.extrasTitle, extrasText(b, t)]
+      ], ['Importe a cuenta', price]);
+      const content_ = `<p style="margin:0 0 14px;font-family:Georgia,serif;font-size:26px;color:#141210">Hola, ${company.name.replace(/[<>&]/g, '')}:</p>
+<p style="margin:0 0 14px;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;color:#2b2723">Hemos registrado la reserva <b>#${b.id}</b> de vuestro cliente. No hay que pagar nada ahora: se incluirá en el resumen de fin de mes.</p>
+${card}
+<p style="margin:0 0 14px;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:1.65;color:#2b2723">Si hay que cambiar algo, responded a este email o escribidnos por WhatsApp.</p>`;
+      const text = [`Hola, ${company.name}:`, '', `Hemos registrado la reserva #${b.id} de vuestro cliente (a cuenta, se incluirá en el resumen de fin de mes).`, '', summary(b, t), `• Importe: ${price}`, '', t.notify.signature].join('\n');
+      await mailer.send({ to: company.email, subject: `Reserva #${b.id} registrada: ${b.date} ${b.time} · ${b.name}`, text, html: renderEmail({ preheader: `Reserva #${b.id} registrada`, content: content_, ...chrome(t, 'ES') }), bookingId: b.id, kind: 'company', replyTo: adminEmail() });
+    }
+    await emailAdmin(`Nueva reserva de ${company.name} #${b.id}: ${b.origin} → ${b.destination} (${b.date} ${b.time})`, [
+      `Nueva reserva A CUENTA de ${company.name} #${b.id}`, '',
+      `Huésped: ${b.name} · ${b.phone}${b.email ? ' · ' + b.email : ''}`,
+      `Trayecto: ${b.origin} → ${b.destination}`,
+      `Fecha: ${b.date} a las ${b.time}`,
+      `Pasajeros: ${b.pax} · Maletas: ${b.luggage}`,
+      b.flight && `Vuelo: ${b.flight}`,
+      b.sign && `Cartel: ${b.sign}`,
+      extrasText(b, t) && `Extras: ${extrasText(b, t)}`, '',
+      b.amount_eur > 0 ? `Importe: ${money(b.amount_eur, 'ES')} (a cuenta: se cobra con el resumen mensual)` : `Sin precio automático: ponle precio en el panel.`,
+      `Panel: ${baseUrl}/reservas · Resumen de la empresa: ${baseUrl}/admin/empresas`
+    ], b);
+  }
+
+  return { KINDS, message, emailClient, whatsappUrl, bookingReceived, bookingPaid, companyBooking };
 }
 
 module.exports = { createNotifier };

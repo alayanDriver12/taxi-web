@@ -29,7 +29,8 @@ function presetFields(preset, p) {
   };
 }
 
-export default function BookingForm({ t, p, lang, waBase, owner, preset }) {
+// account = { token, name }: formulario de un hotel o empresa (reserva a cuenta, sin pago; email del huésped opcional)
+export default function BookingForm({ t, p, lang, waBase, owner, preset, account }) {
   const b = t.booking;
   const [f, setF] = useState(() => (preset ? { ...EMPTY, ...presetFields(preset, p) } : EMPTY));
   const [accepted, setAccepted] = useState(false);
@@ -71,7 +72,7 @@ export default function BookingForm({ t, p, lang, waBase, owner, preset }) {
 
   async function submit() {
     setError('');
-    const needed = [f.name, f.phone, f.email, f.date, f.time, ...(f.mode === 'custom' ? [f.origin, f.destination] : [])];
+    const needed = [f.name, f.phone, ...(account ? [] : [f.email]), f.date, f.time, ...(f.mode === 'custom' ? [f.origin, f.destination] : [])];
     if (needed.some(v => !String(v).trim())) return setError(b.missing);
     if (f.mode === 'route' && !dest) return setError(b.noPlace);
     if (!accepted) return setError(b.mustAccept);
@@ -84,8 +85,8 @@ export default function BookingForm({ t, p, lang, waBase, owner, preset }) {
         extras: f.extras, extrasOther: f.extrasOther,
         name: f.name, company: f.company, phone: f.phone, email: f.email,
         privacy: true, lang
-      });
-      if (r.payUrl) {
+      }, account ? `/api/empresa/${account.token}/bookings` : undefined);
+      if (r.payUrl && !account) {
         location.href = r.payUrl + (lang === 'EN' ? '?lang=en' : '');
         return;
       }
@@ -100,7 +101,7 @@ export default function BookingForm({ t, p, lang, waBase, owner, preset }) {
     return (
       <div className="py-10 text-center" role="status">
         <div className="mx-auto h-14 w-14 rounded-full bg-[#C5A46A] grid place-items-center text-[24px]">✓</div>
-        <p className="mt-6 serif text-[30px] leading-tight max-w-[440px] mx-auto">{fill(b.sent, { id: sentId })}</p>
+        <p className="mt-6 serif text-[30px] leading-tight max-w-[440px] mx-auto">{fill(account ? t.account.sent : b.sent, { id: sentId })}</p>
         <button type="button" onClick={() => { setSentId(null); setF(EMPTY); setAccepted(false); }} className="mt-8 text-[12px] underline text-black/60">
           ←
         </button>
@@ -240,9 +241,9 @@ export default function BookingForm({ t, p, lang, waBase, owner, preset }) {
 
       {/* Datos del cliente */}
       <div className="mt-6 grid md:grid-cols-2 gap-4">
-        {['name', 'company', 'phone', 'email'].map(k => (
+        {(account ? ['name', 'phone', 'email'] : ['name', 'company', 'phone', 'email']).map(k => (
           <div key={k}>
-            <label className={label}>{b.fields[k]}</label>
+            <label className={label}>{account && k === 'name' ? t.account.guest : account && k === 'email' ? t.account.email : b.fields[k]}</label>
             <input type={k === 'email' ? 'email' : k === 'phone' ? 'tel' : 'text'} className={input} value={f[k]} onChange={e => set({ [k]: e.target.value })} />
           </div>
         ))}
@@ -267,7 +268,7 @@ export default function BookingForm({ t, p, lang, waBase, owner, preset }) {
             <>
               <div className="text-white/80">{quote.tariff === 'T2' ? b.tariff2 : b.tariff1}</div>
               {quote.extrasAmount > 0 && <div>{fill(b.extrasIncluded, { amount: money(quote.extrasAmount, lang) })}</div>}
-              <div>{b.totalNote}</div>
+              <div>{account ? fill(t.account.billing, { name: account.name }) : b.totalNote}</div>
             </>
           ) : (
             <div>{f.mode === 'route' && !dest ? b.noPlace : b.quoteNote}</div>
@@ -295,7 +296,7 @@ export default function BookingForm({ t, p, lang, waBase, owner, preset }) {
           disabled={sending}
           className="h-12 px-4 rounded-full bg-[#C5A46A] text-black text-[11px] md:text-[12px] tracking-[0.16em] font-semibold flex items-center justify-center text-center leading-tight hover:brightness-110 transition disabled:opacity-60"
         >
-          {sending ? '…' : (priced ? fill(b.pay, { amount: money(quote.amount, lang) }) : b.request).toUpperCase()}
+          {sending ? '…' : (account ? fill(t.account.submit, { name: account.name }) : priced ? fill(b.pay, { amount: money(quote.amount, lang) }) : b.request).toUpperCase()}
         </button>
         <a
           href={`${waBase}?text=${encodeURIComponent(fill(b.whatsappMessage, { ...f, origin: route[0], destination: route[1] }))}`}
@@ -306,7 +307,7 @@ export default function BookingForm({ t, p, lang, waBase, owner, preset }) {
           {b.whatsapp.toUpperCase()}
         </a>
       </div>
-      <div className="mt-4 text-center text-[11px] tracking-wide text-black/50">{b.secure}</div>
+      {!account && <div className="mt-4 text-center text-[11px] tracking-wide text-black/50">{b.secure}</div>}
     </div>
   );
 }

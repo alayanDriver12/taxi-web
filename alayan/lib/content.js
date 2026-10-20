@@ -43,6 +43,8 @@ function sanitize(value, tpl) {
 const RENAMED = {
   ES: {
     'Silla infantil gratis': 'Silla infantil (5 €)',
+    'Agua + prensa': 'Agua de cortesía',
+    'Agua y prensa': 'Agua de cortesía',
     '1-3 pasajeros': '1-4 pasajeros',
     'Portugal y Pueblos Blancos': 'Pueblos Blancos y Costa',
     'PORTUGAL': 'PUERTOS DE CRUCEROS',
@@ -51,6 +53,8 @@ const RENAMED = {
   },
   EN: {
     'Free child seat': 'Child seat (€5)',
+    'Water + press': 'Complimentary water',
+    'Water & press': 'Complimentary water',
     '1-3 passengers': '1-4 passengers',
     'Portugal & White Villages': 'White Villages & Coast',
     'PORTUGAL': 'CRUISE PORTS',

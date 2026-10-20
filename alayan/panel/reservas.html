@@ -126,7 +126,7 @@ function extrasText(r) {
   return Object.keys(EXTRA_LABELS).filter(k => e[k]).map(k => (k === 'other' && e.otherText ? 'Otros: ' + e.otherText : EXTRA_LABELS[k])).join(', ');
 }
 const STATUSES = ['pendiente', 'pagada', 'confirmada', 'cancelada'];
-const PAY_LABELS = { sin_pago: 'sin presupuesto', enlace_enviado: 'presupuesto enviado', pagado: 'pagado', fallido: 'pago fallido' };
+const PAY_LABELS = { a_cuenta: 'a cuenta (empresa)', sin_pago: 'sin presupuesto', enlace_enviado: 'presupuesto enviado', pagado: 'pagado', fallido: 'pago fallido' };
 const ATTEMPT_LABELS = { PENDING: 'en curso', PAID: 'pagado', FAILED: 'rechazado', EXPIRED: 'caducado' };
 const $ = id => document.getElementById(id);
 let me, all = [];
@@ -134,7 +134,7 @@ const today = () => new Date().toLocaleDateString('sv'); // AAAA-MM-DD en hora l
 const eur = n => Number(n).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
 const utc = s => s ? new Date(s.replace(' ', 'T') + 'Z').toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '';
 
-const EMAIL_LABELS = { received: 'solicitud recibida', quote: 'presupuesto', paid: 'pago recibido', confirmed: 'confirmada', cancelled: 'cancelada' };
+const EMAIL_LABELS = { company: 'confirmación a la empresa', received: 'solicitud recibida', quote: 'presupuesto', paid: 'pago recibido', confirmed: 'confirmada', cancelled: 'cancelada' };
 const EMAIL_STATUS = { sent: '', simulated: ' (prueba, no enviado)', failed: ' ❌ falló' };
 
 function cobro(r) {
@@ -154,6 +154,12 @@ function cobro(r) {
     const paid = r.payments.find(p => p.status === 'PAID');
     return `<span class="tag pagado">pagado</span>
       <div class="paid"><b>${eur(paid?.amount_eur ?? r.amount_eur)}</b><br><small>${utc(r.paid_at)}${paid?.transaction_code ? ' · ref. ' + esc(paid.transaction_code) : ''}</small></div>${notifyBtn}${attempts}${emails}`;
+  }
+  if (r.payment_status === 'a_cuenta') {
+    return `<span class="tag a_cuenta pendiente">a cuenta · ${esc(r.company_name || 'empresa')}</span>
+      <div class="price"><input id="a${r.id}" type="text" inputmode="decimal" autocomplete="off" placeholder="Precio €" value="${r.amount_eur != null ? r.amount_eur.toFixed(2).replace('.', ',') : ''}">
+        <button class="small" data-price="${r.id}">Guardar precio</button></div>
+      <div class="row"><button class="ghost small" data-settle="${r.id}">Marcar cobrada</button></div>${notifyBtn}${emails}`;
   }
   const canQuote = r.status !== 'cancelada' && r.date >= today();
   return `<span class="tag ${r.payment_status}">${PAY_LABELS[r.payment_status] || r.payment_status}</span>
@@ -184,7 +190,7 @@ function render() {
 
   $('rows').innerHTML = rows.map(r => `<tr class="${r.date < today() ? 'past' : ''}">
     <td>${r.id}<br><small>${utc(r.created_at)}</small></td>
-    <td><b>${esc(r.name)}</b>${r.company ? '<br>' + esc(r.company) : ''}<br><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a><br><small>${r.email ? esc(r.email) : 'sin email'}</small>${r.source === 'panel' ? '<br><span class="tag">📱 creada en el panel</span>' : ''}</td>
+    <td><b>${esc(r.name)}</b>${r.company ? '<br>' + esc(r.company) : ''}<br><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a><br><small>${r.email ? esc(r.email) : 'sin email'}</small>${r.source === 'panel' ? '<br><span class="tag">📱 creada en el panel</span>' : ''}${r.company_name ? `<br><span class="tag">🏨 ${esc(r.company_name)}</span>` : ''}</td>
     <td>${esc(r.origin)}<br>→ ${esc(r.destination)}<br><small>${MODE_LABELS[r.route_mode] || ''}${r.tariff ? ' · ' + (r.tariff === 'T2' ? 'Tarifa 2' : 'Tarifa 1') : ''}</small></td>
     <td><b>${esc(r.date)}</b><br>${esc(r.time)}</td>
     <td>${r.pax} pax · ${r.luggage} maletas${r.flight ? '<br>✈ ' + esc(r.flight) : ''}${r.sign ? '<br>🪧 ' + esc(r.sign) : ''}${extrasText(r) ? '<br>➕ ' + esc(extrasText(r)) : ''}</td>
@@ -274,6 +280,12 @@ $('rows').addEventListener('click', async e => {
       await load();
     } catch (err) { toast(err.message, 'error'); t.disabled = false; }
   }
+  if (d.price) {
+    const amount = $('a' + d.price).value;
+    if (!(parseFloat(amount) > 0)) return toast('Pon el precio.', 'error');
+    await update(d.price, { amount });
+  }
+  if (d.settle && confirm(`¿Marcar la reserva #${d.settle} como cobrada?`)) await update(d.settle, { settled: true });
   if (d.copy) {
     await navigator.clipboard?.writeText(d.copy).then(() => toast('Enlace copiado'), () => toast('No se pudo copiar', 'error'));
   }

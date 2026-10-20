@@ -7,6 +7,7 @@ import { FixedRates, KmRates, PriceTable, Coverage } from './Rates.jsx';
 import { fill, withLang } from './util.js';
 import { HOME, ROUTES_INDEX, resolvePage, pagePath, routeList, routePath, routeVars } from './routes.js';
 import { RoutePage, RoutesIndex } from './RoutePage.jsx';
+import Account, { accountTokenFromPath } from './Account.jsx';
 
 // Idioma: lo marca la URL (/en/…, o ?lang=en en las páginas legales y de pago).
 // En la página de pago, si no viene, se usa el del navegador.
@@ -22,7 +23,8 @@ export default function App({ content, url }) {
   const pathname = url.pathname.replace(/[/]+$/, '') || '/';
   const legalPage = LEGAL_PATHS[pathname];
   const payToken = payTokenFromPath(url.pathname);
-  const page = legalPage || payToken ? null : resolvePage(url.pathname, url.search, content.pricing) || { kind: 'home', lang: 'ES' };
+  const accountToken = accountTokenFromPath(url.pathname);
+  const page = legalPage || payToken || accountToken ? null : resolvePage(url.pathname, url.search, content.pricing) || { kind: 'home', lang: 'ES' };
   const lang = page ? page.lang : langFor(url, payToken);
   const [preset, setPreset] = useState(null);
   const t = content[lang];
@@ -52,7 +54,7 @@ export default function App({ content, url }) {
   const footer = <Footer t={t} img={img} lang={lang} p={content.pricing} />;
 
   // Páginas secundarias (legales y pago): cabecera sencilla + pie
-  if (legalPage || payToken) {
+  if (legalPage || payToken || accountToken) {
     return (
       <div className="min-h-screen bg-[#0A0A0A] text-[#F7F3ED] antialiased selection:bg-[#C5A46A]/30">
         <header className="border-b border-white/[0.06]">
@@ -68,7 +70,9 @@ export default function App({ content, url }) {
         </header>
         {legalPage
           ? <Legal page={legalPage} content={content} t={t} lang={lang} />
-          : <Pay token={payToken} t={t} lang={lang} waBase={waBase} />}
+          : accountToken
+            ? <Account token={accountToken} content={content} t={t} lang={lang} waBase={waBase} />
+            : <Pay token={payToken} t={t} lang={lang} waBase={waBase} />}
         {footer}
       </div>
     );

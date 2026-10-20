@@ -142,6 +142,19 @@ module.exports = {
       homeSeoTitle: '',
       homeSeoDescription: ''
     },
+    account: {
+      kicker: 'RESERVAS DE EMPRESA',
+      title: 'Reservas para {name}',
+      subtitle: 'Reserva aquí los traslados de vuestros clientes. No hay que pagar ahora: se incluyen en el resumen de fin de mes.',
+      guest: 'Nombre del cliente o huésped *',
+      email: 'Email del cliente (opcional)',
+      submit: 'Reservar a cuenta de {name}',
+      billing: 'A cuenta de {name} · se cobra con el resumen mensual',
+      sent: '¡Reserva #{id} registrada! Os hemos enviado la confirmación por email.',
+      another: 'Hacer otra reserva',
+      invalid: 'Este enlace no es válido o está desactivado. Escríbenos y te ayudamos.',
+      loading: 'Cargando…'
+    },
     classes: {
       title: 'Elija su clase',
       subtitle: 'Mismo conductor profesional, distinto nivel de confort.',
@@ -150,7 +163,7 @@ module.exports = {
       vatNote: 'Precios con IVA incluido. El precio final se confirma antes del pago.',
       cards: [
         { name: 'Económico', price: 'Desde 35€', features: ['Vehículo confort', '1-4 pasajeros', 'Aeropuerto / Estación', 'Tracking vuelo incluido'], popular: false },
-        { name: 'Confort', price: 'Desde 55€', features: ['Ford Alayan híbrido', 'Agua + prensa', 'Cartel bienvenida', 'Cancelación 24h gratis'], popular: true },
+        { name: 'Confort', price: 'Desde 55€', features: ['Ford Alayan híbrido', 'Agua de cortesía', 'Cartel bienvenida', 'Cancelación 24h gratis'], popular: true },
         { name: 'VIP', price: 'Desde 90€', features: ['Tesla / Mercedes E', 'Chofer trajeado', 'Disposición por horas', 'Pueblos Blancos y Costa'], popular: false }
       ]
     },
@@ -196,7 +209,7 @@ module.exports = {
       title: 'Reserva con pago seguro SumUp',
       subtitle: 'Precio al momento. Pago protegido. Confirmación por WhatsApp.',
       includesTitle: 'INCLUYE',
-      includes: ['Tracking vuelo', 'Meet & Greet', 'Agua y prensa', 'Silla infantil (5 €)', 'Espera por retraso', 'Cartel personalizado'],
+      includes: ['Tracking vuelo', 'Meet & Greet', 'Agua de cortesía', 'Silla infantil (5 €)', 'Espera por retraso', 'Cartel personalizado'],
       cancel: 'Política: cancelación gratuita hasta 24h antes. Después, 50%. No-show 100%.',
       fleetNote: 'Flota blanca real • Híbrida enchufable • Silencio y Eco',
       fleetSign: 'MÁS QUE UN TRASLADO UNA EXPERIENCIA — Firma Alayan',
@@ -457,6 +470,19 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
       homeSeoTitle: 'Alayan Driver · Private transfers in Seville and Andalusia',
       homeSeoDescription: 'Private transfers and airport taxi in Seville and all of Andalusia. Fixed prices, professional drivers, premium vehicles and online payment.'
     },
+    account: {
+      kicker: 'BUSINESS BOOKINGS',
+      title: 'Bookings for {name}',
+      subtitle: 'Book your guests’ transfers here. Nothing to pay now: they are included in the end-of-month statement.',
+      guest: 'Guest name *',
+      email: 'Guest email (optional)',
+      submit: 'Book on {name} account',
+      billing: 'On {name} account · charged with the monthly statement',
+      sent: 'Booking #{id} registered! We have emailed you the confirmation.',
+      another: 'Make another booking',
+      invalid: 'This link is not valid or has been disabled. Message us and we will help you.',
+      loading: 'Loading…'
+    },
     classes: {
       title: 'Choose your class',
       subtitle: 'Same professional driver, different comfort level.',
@@ -465,7 +491,7 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
       vatNote: 'Prices include VAT. The final price is confirmed before payment.',
       cards: [
         { name: 'Economy', price: 'From €35', features: ['Comfort vehicle', '1-4 passengers', 'Airport / Station', 'Flight tracking included'], popular: false },
-        { name: 'Comfort', price: 'From €55', features: ['Ford Alayan hybrid', 'Water + press', 'Welcome sign', 'Free cancellation 24h'], popular: true },
+        { name: 'Comfort', price: 'From €55', features: ['Ford Alayan hybrid', 'Complimentary water', 'Welcome sign', 'Free cancellation 24h'], popular: true },
         { name: 'VIP', price: 'From €90', features: ['Tesla / Mercedes E', 'Suited chauffeur', 'Hourly disposal', 'White Villages & Coast'], popular: false }
       ]
     },
@@ -511,7 +537,7 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
       title: 'Book with secure SumUp payment',
       subtitle: 'Instant price. Protected payment. WhatsApp confirmation.',
       includesTitle: 'INCLUDES',
-      includes: ['Flight tracking', 'Meet & Greet', 'Water & press', 'Child seat (€5)', 'Waiting for delays', 'Custom welcome sign'],
+      includes: ['Flight tracking', 'Meet & Greet', 'Complimentary water', 'Child seat (€5)', 'Waiting for delays', 'Custom welcome sign'],
       cancel: 'Policy: free cancellation up to 24h before. After, 50%. No-show 100%.',
       fleetNote: 'Real white fleet • Plug-in hybrid • Silence & Eco',
       fleetSign: 'MORE THAN A TRANSFER, AN EXPERIENCE — Alayan signature',

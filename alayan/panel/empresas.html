@@ -1,0 +1,157 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex"><title>Empresas · Alayan</title>
+<link rel="stylesheet" href="/panel/panel.css">
+<style>
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start}
+@media (max-width:960px){.grid{grid-template-columns:1fr}}
+table{min-width:720px}
+#newCo>div{margin-bottom:12px}
+.link{font-size:12px;word-break:break-all;color:var(--muted)}
+.month{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 14px}
+.month input{width:auto}
+.totals{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.totals .tag{font-size:13px;padding:5px 12px}
+#detail{margin-top:20px}
+.help{font-size:13px;line-height:1.6;color:var(--muted)}
+</style></head><body>
+<main>
+  <div class="head"><h1>Empresas y hoteles</h1></div>
+  <p class="help" style="margin:-6px 0 16px">Cada empresa tiene un <b>enlace privado</b> para reservar sin registrarse. Sus reservas quedan <b>«a cuenta»</b> (sin pago al reservar) y aquí ves el resumen de cada mes para cobrarlo o facturarlo.</p>
+  <div class="grid">
+    <div>
+      <div class="card wrap"><table>
+        <thead><tr><th>Empresa</th><th>Enlace para reservar</th><th>Pendiente de cobro</th><th>Activa</th><th></th></tr></thead>
+        <tbody id="rows"><tr><td colspan="5">Cargando…</td></tr></tbody>
+      </table></div>
+      <section class="card" id="detail" hidden>
+        <div class="head" style="margin-bottom:4px"><h2 id="dTitle" style="margin:0"></h2><button class="ghost small" id="dClose">Cerrar</button></div>
+        <div class="month"><label style="margin:0">Mes del viaje</label><input type="month" id="dMonth"><button class="ghost small" id="dCsv">Descargar CSV</button><button class="small" id="dSettle">Marcar mes como cobrado</button></div>
+        <div class="totals" id="dTotals"></div>
+        <div class="wrap"><table>
+          <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Trayecto</th><th>Importe</th><th>Estado</th></tr></thead>
+          <tbody id="dRows"></tbody>
+        </table></div>
+      </section>
+    </div>
+    <form class="card" id="newCo">
+      <h2>Nueva empresa</h2>
+      <div><label>Nombre (lo verá en su página) *</label><input name="name" required maxlength="120" placeholder="Ej: Hotel Alfonso XIII"></div>
+      <div><label>Persona de contacto</label><input name="contact" maxlength="120"></div>
+      <div><label>Email (recibe la confirmación de cada reserva)</label><input name="email" type="email" maxlength="120"></div>
+      <div><label>Teléfono</label><input name="phone" maxlength="30"></div>
+      <div><label>Notas internas (condiciones, facturación…)</label><textarea name="notes" rows="3" maxlength="1000"></textarea></div>
+      <button type="submit">Crear y obtener enlace</button>
+    </form>
+  </div>
+</main>
+<script src="/panel/panel.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const eur = n => Number(n || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+let companies = [], current = null;
+
+async function load() {
+  companies = await api('/api/panel/companies');
+  $('rows').innerHTML = companies.map(c => `<tr>
+    <td><b>${esc(c.name)}</b>${c.contact ? '<br><small>' + esc(c.contact) + '</small>' : ''}${c.email ? '<br><small>' + esc(c.email) + '</small>' : ''}${c.phone ? '<br><small>' + esc(c.phone) + '</small>' : ''}</td>
+    <td><div class="link">${esc(c.url)}</div><div class="row">
+      <button class="small" data-copy="${esc(c.url)}">Copiar enlace</button>
+      <a class="btn ghost small" href="${esc(c.url)}" target="_blank">Abrir ↗</a>
+      <a class="btn ghost small" target="_blank" href="https://wa.me/?text=${encodeURIComponent('Este es vuestro enlace para reservar traslados con Alayan Driver (sin pago al reservar, se factura a final de mes): ' + c.url)}">WhatsApp</a></div></td>
+    <td>${c.pending ? `<b>${eur(c.pending_eur)}</b><br><small>${c.pending} reserva(s)</small>` : '<small>—</small>'}<br><small>${c.bookings} en total</small></td>
+    <td><input type="checkbox" data-active="${c.id}" ${c.active ? 'checked' : ''} title="Desactivada: su enlace deja de funcionar"></td>
+    <td><div class="row" style="margin:0;flex-wrap:wrap">
+      <button class="ghost small" data-month="${c.id}">Resumen del mes</button>
+      <button class="ghost small" data-edit="${c.id}">Editar</button>
+      <button class="danger small" data-newlink="${c.id}" title="El enlace anterior deja de funcionar">Nuevo enlace</button></div></td>
+  </tr>`).join('') || '<tr><td colspan="5">Todavía no hay empresas. Crea la primera con el formulario.</td></tr>';
+}
+
+async function patch(id, body, msg) {
+  try { await api('/api/panel/companies/' + id, { method: 'PATCH', body }); toast(msg); }
+  catch (e) { toast(e.message, 'error'); }
+  await load();
+}
+
+$('rows').addEventListener('change', e => {
+  const id = e.target.dataset.active;
+  if (id) patch(id, { active: e.target.checked }, e.target.checked ? 'Empresa activada' : 'Empresa desactivada: su enlace ya no funciona');
+});
+
+$('rows').addEventListener('click', async e => {
+  const d = e.target.dataset;
+  if (d.copy) navigator.clipboard?.writeText(d.copy).then(() => toast('Enlace copiado'), () => toast('No se pudo copiar', 'error'));
+  if (d.newlink && confirm('¿Crear un enlace nuevo? El actual dejará de funcionar (por ejemplo, si se ha compartido con quien no debía).')) patch(d.newlink, { newLink: true }, 'Enlace nuevo creado');
+  if (d.edit) {
+    const c = companies.find(x => String(x.id) === d.edit);
+    const fields = [['name', 'Nombre'], ['contact', 'Contacto'], ['email', 'Email'], ['phone', 'Teléfono'], ['notes', 'Notas']];
+    const body = {};
+    for (const [k, label] of fields) {
+      const v = prompt(label + ':', c[k] || '');
+      if (v === null) return;
+      body[k] = v;
+    }
+    patch(c.id, body, 'Empresa actualizada');
+  }
+  if (d.month) openMonth(companies.find(x => String(x.id) === d.month));
+});
+
+// ---------- Resumen mensual ----------
+let monthData = null;
+async function openMonth(c) {
+  current = c;
+  $('detail').hidden = false;
+  $('dTitle').textContent = c.name;
+  if (!$('dMonth').value) $('dMonth').value = new Date().toISOString().slice(0, 7);
+  await loadMonth();
+  $('detail').scrollIntoView({ behavior: 'smooth' });
+}
+async function loadMonth() {
+  monthData = await api(`/api/panel/companies/${current.id}/month?month=${$('dMonth').value}`);
+  const STATUS = { a_cuenta: 'a cuenta', pagado: 'cobrado', sin_pago: 'sin pago', enlace_enviado: 'enlace enviado', fallido: 'fallido' };
+  $('dTotals').innerHTML = [
+    `<span class="tag">${monthData.bookings.length} reservas</span>`,
+    `<span class="tag">Total ${eur(monthData.total)}</span>`,
+    `<span class="tag pendiente">Pendiente de cobro ${eur(monthData.pending)}</span>`,
+    monthData.withoutPrice ? `<span class="tag fallido">${monthData.withoutPrice} sin precio (ponlo en Reservas)</span>` : ''
+  ].join('');
+  $('dRows').innerHTML = monthData.bookings.map(r => `<tr class="${r.status === 'cancelada' ? 'past' : ''}">
+    <td>${r.id}</td><td>${esc(r.date)} ${esc(r.time)}</td><td>${esc(r.name)}<br><small>${esc(r.phone)}</small></td>
+    <td>${esc(r.origin)} → ${esc(r.destination)}</td><td>${r.amount_eur ? eur(r.amount_eur) : '<small>sin precio</small>'}</td>
+    <td><span class="tag ${r.payment_status === 'pagado' ? 'pagado' : 'pendiente'}">${r.status === 'cancelada' ? 'cancelada' : STATUS[r.payment_status] || r.payment_status}</span></td></tr>`).join('')
+    || '<tr><td colspan="6">Sin reservas este mes.</td></tr>';
+}
+$('dMonth').onchange = loadMonth;
+$('dClose').onclick = () => { $('detail').hidden = true; };
+$('dSettle').onclick = async () => {
+  if (!monthData?.pending) return toast('No hay nada pendiente de cobro este mes.');
+  if (!confirm(`¿Marcar como cobradas las reservas a cuenta de ${current.name} de ${$('dMonth').value} (${eur(monthData.pending)})?`)) return;
+  try { const r = await api(`/api/panel/companies/${current.id}/settle`, { method: 'POST', body: { month: $('dMonth').value } }); toast(`${r.settled} reserva(s) marcadas como cobradas`); }
+  catch (e) { toast(e.message, 'error'); }
+  await loadMonth(); await load();
+};
+$('dCsv').onclick = () => {
+  if (!monthData?.bookings.length) return toast('Sin reservas este mes.');
+  const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const rows = [['Reserva', 'Fecha', 'Hora', 'Cliente', 'Teléfono', 'Origen', 'Destino', 'Pasajeros', 'Importe', 'Estado'],
+    ...monthData.bookings.map(r => [r.id, r.date, r.time, r.name, r.phone, r.origin, r.destination, r.pax, r.amount_eur ?? '', r.status === 'cancelada' ? 'cancelada' : r.payment_status])];
+  const csv = String.fromCharCode(0xfeff) + rows.map(r => r.map(q).join(';')).join(String.fromCharCode(13, 10));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = `${current.name.replace(/[^A-Za-z0-9]+/g, '-')}-${$('dMonth').value}.csv`;
+  a.click();
+};
+
+$('newCo').onsubmit = async e => {
+  e.preventDefault();
+  try {
+    const c = await api('/api/panel/companies', { method: 'POST', body: Object.fromEntries(new FormData(e.target)) });
+    e.target.reset();
+    await navigator.clipboard?.writeText(c.url).catch(() => {});
+    toast('Empresa creada. Enlace copiado: pásaselo por WhatsApp o email.');
+    await load();
+  } catch (err) { toast(err.message, 'error'); }
+};
+
+initPanel('empresas').then(load).catch(e => toast(e.message, 'error'));
+</script></body></html>
