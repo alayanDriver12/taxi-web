@@ -58,7 +58,7 @@ const RENAMED = {
     'Instant quote. Protected payment. WhatsApp confirmation.': 'Instant price. Protected payment. WhatsApp confirmation.'
   }
 };
-const OLD_WHATSAPP = '34600000000'; // número de ejemplo
+const OLD_WHATSAPP = ['34600000000', '34671407527']; // número de ejemplo y el anterior del cliente
 
 function renameTexts(value, map) {
   if (Array.isArray(value)) return value.map(v => renameTexts(v, map));
@@ -84,7 +84,8 @@ function createContentStore(db) {
     let stored;
     try { stored = JSON.parse(row.value); } catch { return; }
     const next = { ...stored, ES: renameTexts(stored.ES, RENAMED.ES), EN: renameTexts(stored.EN, RENAMED.EN) };
-    if (next.contact?.whatsapp === OLD_WHATSAPP) next.contact = { ...next.contact, whatsapp: defaults.contact.whatsapp };
+    if (OLD_WHATSAPP.includes(next.contact?.whatsapp)) next.contact = { ...next.contact, whatsapp: defaults.contact.whatsapp };
+    if (next.legal && !next.legal.phone) next.legal = { ...next.legal, phone: defaults.legal.phone };
     if (JSON.stringify(next) !== JSON.stringify(stored)) {
       putRow.run(JSON.stringify(next), 'actualización');
       console.log('Contenido: textos antiguos actualizados a los nuevos valores por defecto');

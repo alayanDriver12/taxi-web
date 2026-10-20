@@ -3,7 +3,7 @@
 // ES y EN deben tener siempre la misma estructura.
 
 module.exports = {
-  contact: { whatsapp: '34671407527' },
+  contact: { whatsapp: '34620331295' },
   seo: {
     title: 'Alayan Driver · Transfer en Andalucía',
     description: 'Transfers privados en Sevilla y toda Andalucía. Aeropuertos, estaciones, hoteles y eventos.'
@@ -15,7 +15,7 @@ module.exports = {
     nif: '',
     address: '',   // domicilio completo
     email: '',
-    phone: '',
+    phone: '+34 620 33 12 95',
     registry: '',  // datos del Registro Mercantil, solo si es sociedad
     license: ''    // autorización VTC / licencia con la que presta el servicio
   },

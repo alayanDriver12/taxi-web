@@ -522,6 +522,21 @@ app.get(['/', '/index.html', ...Object.keys(LEGAL_PAGES)], (req, res) => {
   sendIndex(res, legalKey && content.get().ES.footer.legal[legalKey]);
 });
 
+// Guía de Sevilla para clientes (web/src/guia/): página independiente, se comparte por enlace.
+// Solo se le pasa el WhatsApp del panel. No se indexa en Google (no es parte de la web pública).
+let guiaTemplate = null;
+app.get(['/guia', '/guide'], (req, res) => {
+  try {
+    if (!guiaTemplate || process.env.NODE_ENV !== 'production') guiaTemplate = fs.readFileSync(path.join(DIST_DIR, 'guia.html'), 'utf8');
+  } catch (e) {
+    if (e.code !== 'ENOENT') throw e;
+    return res.status(503).send('Falta compilar la web: ejecuta <code>npm run build</code>.');
+  }
+  const json = JSON.stringify({ whatsapp: content.get().contact.whatsapp });
+  res.set({ 'Cache-Control': 'no-cache', 'X-Robots-Tag': 'noindex' });
+  res.type('html').send(guiaTemplate.replace('<!--guia-->', `<script>window.__GUIA__=${json}</script>`));
+});
+
 // Página de pago (la pinta React: web/src/Pay.jsx). Privada: que no la indexe nadie.
 app.get('/pago/:token', (req, res) => {
   res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' });

@@ -9,7 +9,9 @@ desarrollador: **español**. Todo el código vive en `alayan/`; el detalle técn
   solas al arrancar (`CREATE TABLE IF NOT EXISTS` / `ALTER TABLE` comprobando `PRAGMA table_info`).
 - **Web pública:** React 18 + Vite + Tailwind 3 en `alayan/web/` → se compila a `alayan/dist/` (no versionado).
   El servidor incrusta el contenido en el HTML (`window.__ALAYAN_CONTENT__`). Rutas: `/`, `/pago/<token>`,
-  `/aviso-legal`, `/privacidad`, `/cookies`, `/condiciones`. Fuentes locales (@fontsource): **sin peticiones a
+  `/aviso-legal`, `/privacidad`, `/cookies`, `/condiciones`. Aparte, **`/guia`** (o `/guide`): guía de Sevilla para los
+  clientes de Joaquín (`web/guia.html` + `web/src/guia/`, ES/EN/IT/FR, `noindex`), independiente de la web: sin enlaces
+  a ella, solo usa el WhatsApp del panel. Textos en `web/src/guia/texts.js`, fotos en `web/public/img/guia/`. Fuentes locales (@fontsource): **sin peticiones a
   terceros ni cookies** en la web pública; no añadir Google Fonts, analítica ni similares sin banner de cookies.
 - **Panel interno:** HTML + JS sin compilar en `alayan/panel/`. Login propio (usuarios en BBDD, scrypt, cookie
   HttpOnly). Roles: `admin` (todo) y `gestor` (solo reservas).
@@ -87,7 +89,8 @@ panel en `/login`. Para el diseño con recarga instantánea: `npm run dev:web` (
 **Configuración:** cuenta del cliente en **Trial → pasar a Hobby** (si no, la web se para al acabar la prueba) ·
 borrar el proyecto antiguo `meticulous-vitality` · dominio IONOS → Cloudflare → Railway (SSL *Full (strict)*) y
 `BEHIND_CLOUDFLARE=true` · Resend con dominio verificado · bucket R2 + token · pasar `develop` → `main`.
-**Cliente:** datos legales en `/admin` (bloquea producción) · su número de WhatsApp real · API key y merchant code de
+**Cliente:** datos legales en `/admin` (bloquea producción) · teléfono/WhatsApp: 620 33 12 95 (desde el 20 oct 2026) ·
+fotos propias o con licencia para `/guia` (las actuales son capturas de Google/webs de terceros) · API key y merchant code de
 SumUp · hojas de reclamaciones de la Junta · Seguro Obligatorio de Viajeros · revisar `/condiciones` con un asesor.
 **Al final:** pago real de pocos euros y comprobar que los emails llegan (y no van a spam).
 **Tarifas (oct 2026):** hecho (tarifas en el panel, carrusel de fotos, formulario con precio y pago al momento). Que el

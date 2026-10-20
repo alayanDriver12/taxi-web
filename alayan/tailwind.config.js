@@ -2,7 +2,7 @@ const path = require('node:path');
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [path.join(__dirname, 'web/index.html'), path.join(__dirname, 'web/src/**/*.{js,jsx}')],
+  content: [path.join(__dirname, 'web/index.html'), path.join(__dirname, 'web/guia.html'), path.join(__dirname, 'web/src/**/*.{js,jsx}')],
   theme: { extend: {} },
   plugins: []
 };

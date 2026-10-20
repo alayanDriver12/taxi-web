@@ -32,6 +32,12 @@ dist/                web compilada (npm run build, no se sube al repo)
 `ADMIN_USER` / `ADMIN_PASS` solo se usan **la primera vez** (con la tabla de usuarios vacía) para crear el
 administrador inicial. Después se gestiona todo desde `/admin/usuarios`.
 
+## Guía de Sevilla (`/guia`)
+Página aparte para pasar a los clientes por enlace (`/guia?lang=en|it|fr` abre en ese idioma). Se compila junto a la web
+(`web/guia.html`, entrada propia en `vite.config.mjs`) pero no comparte menú ni enlaces. Textos en
+`web/src/guia/texts.js`; fotos en `web/public/img/guia/` (mismo nombre de archivo para sustituirlas). Los botones de
+WhatsApp y llamar usan el número de `/admin` → General.
+
 ## Arrancar en local
     npm install
     cp .env.example .env   # edita ADMIN_PASS (mín. 8 caracteres)
