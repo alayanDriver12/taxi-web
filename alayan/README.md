@@ -51,6 +51,11 @@ Para tocar el diseño de la web con recarga instantánea, deja `npm run dev` abi
 Los textos se cambian desde `/admin`, no en el código. Si añades un texto nuevo a la web, añádelo en
 `content/defaults.js` (en ES y en EN) y aparecerá solo en el editor.
 
+## Pruebas
+    npm test     # arranca un servidor con BBDD temporal y SumUp simulado y prueba reservas, precios, pagos, panel y permisos
+
+No envía emails ni cobra nada. Pásalas antes de subir a `develop`.
+
 ## Desplegar (Railway)
 El `Dockerfile` instala dependencias, compila la web y arranca el servidor.
 1. Volumen persistente montado en `/data` (base de datos e imágenes subidas en `/data/uploads`).
