@@ -206,7 +206,7 @@ export default function App({ content, url }) {
 
       {/* Clases */}
       <section id="clases" className="bg-[#F7F3ED] text-black">
-        <div className="mx-auto max-w-[1440px] px-6 md:px-10 py-20 md:py-28">
+        <div className="mx-auto max-w-[1440px] px-6 md:px-10 pt-20 md:pt-28 pb-12 md:pb-14">
           <div className="max-w-[720px]">
             <h2 className="serif text-[40px] md:text-[56px] leading-[0.95]">{t.classes.title}</h2>
             <p className="mt-3 text-black/60">{t.classes.subtitle}</p>

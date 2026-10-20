@@ -14,7 +14,7 @@ export function FixedRates({ t, p, lang, onBook }) {
   ];
   return (
     <section id="tarifas" className="bg-[#F7F3ED] text-black border-t border-black/5">
-      <div className="mx-auto max-w-[1440px] px-6 md:px-10 py-20 md:py-28">
+      <div className="mx-auto max-w-[1440px] px-6 md:px-10 pt-12 md:pt-14 pb-20 md:pb-28">
         <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-12">
           <div>
             <div className="text-[11px] tracking-[0.3em] text-[#C5A46A] font-semibold">{r.fixedKicker}</div>
