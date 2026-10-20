@@ -113,6 +113,10 @@ const app = express();
 app.set('trust proxy', 1);
 // crossOriginResourcePolicy: el logo y las fotos se muestran también dentro de los emails (otro origen)
 app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+
+// www.dominio → dominio (una sola dirección para Google y para las cookies del panel)
+const CANONICAL_HOST = new URL(BASE_URL).hostname;
+app.use((req, res, next) => (req.hostname === 'www.' + CANONICAL_HOST ? res.redirect(301, BASE_URL + req.originalUrl) : next()));
 app.use('/api/panel', express.json({ limit: '300kb' })); // el contenido de la web pesa más que una reserva
 app.use(express.json({ limit: '50kb' }));
 
