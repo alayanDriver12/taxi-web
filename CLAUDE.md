@@ -19,6 +19,9 @@ desarrollador: **español**. Todo el código vive en `alayan/`; el detalle técn
   textos en el contenido editable (`routes`). `sitemap.xml` y `robots.txt` los genera el servidor. **Solo se indexa en
   el dominio definitivo**: en `*.up.railway.app`/localhost todo va con `noindex` (forzable con `INDEXABLE=true|false`).
   `?lang=en` en la portada redirige 301 a `/en`.
+  **IndexNow** (Bing y otros): clave derivada de BASE_URL en `/<clave>.txt`; avisa al guardar tarifas/textos/flota
+  (10 min después) y al arrancar si hace >7 días. Las fotos que se suben desde el panel se reducen en el navegador
+  (`shrinkImage` en `panel/assets/panel.js`): flota a WebP 1920 px; logo y portada en JPG/PNG (emails y WhatsApp).
 - **Panel interno:** HTML + JS sin compilar en `alayan/panel/`. Login propio (usuarios en BBDD, scrypt, cookie
   HttpOnly). Roles: `admin` (todo) y `gestor` (solo reservas).
 - **Despliegue:** Railway con `alayan/Dockerfile` (multi-etapa: compila la web). Repo en GitHub.

@@ -57,7 +57,7 @@ function render() {
             : `<input data-l="${L}" data-k="${k}" value="${esc(car[L][k])}">`}</div>`).join('')}
         </div>`).join('')}
       </div>
-      <label style="margin-top:6px">Fotos (${car.images.length}/${maxImages}) · JPG, PNG o WebP, máx. 8 MB</label>
+      <label style="margin-top:6px">Fotos (${car.images.length}/${maxImages}) · JPG, PNG o WebP (se reducen solas al subirlas)</label>
       <div class="photos">
         ${car.images.map((src, i) => `<div class="photo">
           <img src="${esc(src)}" alt="" loading="lazy">
@@ -123,9 +123,10 @@ $('cars').addEventListener('change', async e => {
   try {
     if (dirty) await save(null);
     let ok = 0;
-    for (const file of files) {
-      if (file.size > 8 * 1024 * 1024) { toast(`«${file.name}» pesa más de 8 MB.`, 'error'); continue; }
-      toast(`Subiendo ${file.name}…`);
+    for (const original of files) {
+      toast(`Preparando ${original.name}…`);
+      const file = await shrinkImage(original); // ~1920 px en WebP: carga rápida en la web
+      if (file.size > 8 * 1024 * 1024) { toast(`«${original.name}» pesa más de 8 MB y no se ha podido reducir.`, 'error'); continue; }
       const res = await api(`/api/panel/fleet/${id}/images`, { method: 'POST', file });
       fleet = res.fleet; ok++;
     }

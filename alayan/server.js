@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
+const crypto = require('node:crypto');
 const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -411,7 +412,7 @@ const contentResponse = () => ({ content: content.get(), defaults: content.defau
 panel.get('/content', adminOnly, (req, res) => res.json(contentResponse()));
 
 panel.put('/content', adminOnly, (req, res) => {
-  try { content.saveTexts(req.body || {}, req.user.username); res.json(contentResponse()); }
+  try { content.saveTexts(req.body || {}, req.user.username); res.json(contentResponse()); scheduleIndexNow('textos'); }
   catch (e) { res.status(400).json({ error: e.message }); }
 });
 
@@ -478,10 +479,10 @@ panel.delete('/users/:id', adminOnly, (req, res) => {
 const pricingResponse = () => ({ pricing: pricing.get(), preview: pricing.publicView().destinations, meta: pricing.meta() });
 panel.get('/pricing', adminOnly, (req, res) => res.json(pricingResponse()));
 panel.put('/pricing', adminOnly, (req, res) => {
-  try { pricing.save(req.body || {}, req.user.username); res.json(pricingResponse()); }
+  try { pricing.save(req.body || {}, req.user.username); res.json(pricingResponse()); scheduleIndexNow('tarifas'); }
   catch (e) { res.status(400).json({ error: e.message }); }
 });
-panel.post('/pricing/reset', adminOnly, (req, res) => { pricing.reset(req.user.username); res.json(pricingResponse()); });
+panel.post('/pricing/reset', adminOnly, (req, res) => { pricing.reset(req.user.username); res.json(pricingResponse()); scheduleIndexNow('tarifas'); });
 
 // Flota: textos y orden de los coches, y sus fotos (varias por coche)
 panel.get('/fleet', adminOnly, (req, res) => res.json({ fleet: fleet.get(), maxImages: fleet.MAX_IMAGES }));
@@ -491,6 +492,7 @@ panel.put('/fleet', adminOnly, (req, res) => {
   const kept = new Set(after.flatMap(c => c.images));
   before.filter(u => !kept.has(u)).forEach(removeUpload); // fotos quitadas: se borran del disco
   res.json({ fleet: after, maxImages: fleet.MAX_IMAGES });
+  scheduleIndexNow('flota');
 });
 panel.post('/fleet/:id/images', adminOnly, express.raw({ type: 'image/*', limit: '8mb' }), (req, res) => {
   const buf = Buffer.isBuffer(req.body) ? req.body : Buffer.alloc(0);
@@ -650,6 +652,43 @@ ${[...urls, ...legal].join('\n')}
 </urlset>
 `);
 });
+
+// IndexNow: avisa a Bing (y a los buscadores que usan el protocolo) de las páginas nuevas o cambiadas.
+// La clave sale de BASE_URL (estable, sin variable nueva) y se publica en /<clave>.txt, como pide el protocolo.
+// Se avisa al guardar tarifas, textos o flota (10 min después del último cambio) y al arrancar si hace más de 7 días.
+const INDEXNOW_KEY = crypto.createHash('sha256').update('indexnow:' + BASE_URL).digest('hex').slice(0, 32);
+app.get(`/${INDEXNOW_KEY}.txt`, (req, res) => res.type('text/plain').send(INDEXNOW_KEY));
+const indexNowLast = {
+  get: () => db.prepare(`SELECT updated_at FROM settings WHERE key='indexnow'`).get()?.updated_at,
+  set: () => db.prepare(`INSERT INTO settings (key, value) VALUES ('indexnow', 'ok')
+    ON CONFLICT(key) DO UPDATE SET updated_at=datetime('now')`).run()
+};
+async function pingIndexNow(reason) {
+  if (!INDEXABLE) return;
+  const mod = await loadSsr();
+  if (!mod) return;
+  const urlList = [...mod.sitemapPages(pricing.publicView()).flatMap(p => [BASE_URL + p.es, BASE_URL + p.en]), ...Object.keys(LEGAL_PAGES).map(p => BASE_URL + p)];
+  try {
+    const r = await fetch('https://api.indexnow.org/indexnow', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      body: JSON.stringify({ host: SITE_HOST, key: INDEXNOW_KEY, keyLocation: `${BASE_URL}/${INDEXNOW_KEY}.txt`, urlList })
+    });
+    console.log(`🔎 IndexNow (${reason}): ${urlList.length} páginas → ${r.status}`);
+    if (r.ok) indexNowLast.set();
+  } catch (e) { console.error('IndexNow:', e.message); }
+}
+let indexNowTimer = null;
+function scheduleIndexNow(reason) {
+  if (!INDEXABLE) return;
+  clearTimeout(indexNowTimer);
+  indexNowTimer = setTimeout(() => pingIndexNow(reason), 10 * 60 * 1000);
+  indexNowTimer.unref();
+}
+if (INDEXABLE) setTimeout(() => {
+  const last = indexNowLast.get();
+  if (!last || Date.now() - new Date(last.replace(' ', 'T') + 'Z') > 7 * 864e5) pingIndexNow('arranque');
+}, 60 * 1000).unref();
 
 // Guía de Sevilla para clientes (web/src/guia/): página independiente, se comparte por enlace.
 // Solo se le pasa el WhatsApp del panel. No se indexa en Google (no es parte de la web pública).

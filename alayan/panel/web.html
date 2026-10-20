@@ -379,9 +379,13 @@ function applyImages(data) {
   renderSection();
 }
 
-async function uploadImage(slot, file) {
-  if (!file) return;
-  if (file.size > 8 * 1024 * 1024) return toast('La imagen pesa más de 8 MB.', 'error');
+async function uploadImage(slot, original) {
+  if (!original) return;
+  // Logo y portada en JPG/PNG (también salen en emails y al compartir por WhatsApp, donde WebP no siempre funciona)
+  const file = await shrinkImage(original, slot === 'logo'
+    ? { max: 800, type: original.type === 'image/png' ? 'image/png' : 'image/jpeg', quality: 0.9 }
+    : { max: 2400, type: 'image/jpeg', quality: 0.85 });
+  if (file.size > 8 * 1024 * 1024) return toast('La imagen pesa más de 8 MB y no se ha podido reducir.', 'error');
   try { applyImages(await api('/api/panel/images/' + slot, { method: 'POST', file })); toast('Imagen publicada'); }
   catch (e) { toast(e.message, 'error'); }
 }

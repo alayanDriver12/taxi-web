@@ -16,6 +16,24 @@ async function api(url, { method = 'GET', body, file } = {}) {
   return data;
 }
 
+// Reduce una foto en el navegador antes de subirla (las del móvil pesan 3-10 MB): lado mayor ≤ max px.
+// Si no se puede (formato raro, navegador antiguo) o no mejora, se sube la original.
+async function shrinkImage(file, { max = 1920, type = 'image/webp', quality = 0.82 } = {}) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    if (scale === 1 && file.type === type && file.size < 400 * 1024) return file;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(bmp.width * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, type, quality));
+    if (!blob || blob.size >= file.size) return file;
+    const ext = { 'image/webp': 'webp', 'image/png': 'png', 'image/jpeg': 'jpg' }[blob.type] || 'jpg';
+    return new File([blob], file.name.replace(/\.\w+$/, '') + '.' + ext, { type: blob.type });
+  } catch { return file; }
+}
+
 function toast(msg, kind = 'ok') {
   let box = document.getElementById('toast');
   if (!box) { box = document.createElement('div'); box.id = 'toast'; document.body.append(box); }
