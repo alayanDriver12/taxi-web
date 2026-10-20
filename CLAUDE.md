@@ -98,19 +98,18 @@ panel en `/login`. Para el diseño con recarga instantánea: `npm run dev:web` (
   se han corrompido varias veces: revisar con `node --check` y, si hace falta, usar `String.fromCharCode(...)`.
 - Nunca subir `.env`, claves ni ficheros `.db` (ya en `.gitignore`).
 
-## Pendiente (octubre 2026)
-**Hecho (8 oct 2026):** repo y Railway pasados al cliente · production y staging en Ámsterdam, probados (29/29).
-**Configuración:** cuenta del cliente en **Trial → pasar a Hobby** (si no, la web se para al acabar la prueba) ·
-borrar el proyecto antiguo `meticulous-vitality` · dominio **alayandriver.com** (comprado en IONOS) → DNS en Cloudflare →
-Railway (SSL *Full (strict)*), `BASE_URL=https://alayandriver.com` y `BEHIND_CLOUDFLARE=true` · Resend con el dominio
-verificado (remitente `reservas@alayandriver.com`) y clave nueva solo de envío · bucket R2 + token · pasar `develop` → `main`
-y copiar a producción tarifas, flota, textos y datos legales · Google Search Console + sitemap · enlazar la ficha de
-Google (Perfil de Empresa, pendiente de verificar) y su enlace de reseñas en emails y `/guia`.
-**Cliente:** datos legales ya en staging (Joaquín Romero Rodríguez, autónomo, **licencia de taxi nº 349**) ·
-**tarifas:** el cliente mandará una tabla oficial y hay que cargarla en `/admin/tarifas` (con licencia de taxi no puede
-cobrar por encima de las tarifas oficiales de Ayuntamiento/Junta) · teléfono/WhatsApp: 620 33 12 95 (desde el 20 oct 2026) ·
-fotos propias o con licencia para `/guia` (las actuales son capturas de Google/webs de terceros) · API key y merchant code de
-SumUp · hojas de reclamaciones de la Junta · Seguro Obligatorio de Viajeros · revisar `/condiciones` con un asesor.
-**Al final:** pago real de pocos euros y comprobar que los emails llegan (y no van a spam).
-**Tarifas (oct 2026):** hecho (tarifas en el panel, carrusel de fotos, formulario con precio y pago al momento). Que el
-cliente revise en `/admin/tarifas` los km de la tabla (su web tenía Jerez a 95 € y Madrid con km distintos) y sus festivos locales.
+## Pendiente (actualizado 20 oct 2026)
+**Hecho (20 oct 2026):** web nueva en producción en **https://alayandriver.com** (Railway Hobby, Cloudflare, SSL) ·
+datos legales de Joaquín en producción y staging · emails con Resend desde `reservas@alayandriver.com` (dominio
+verificado, clave nueva solo de envío) · Search Console verificado, sitemap enviado e indexación solicitada · Perfil de
+Empresa de Google verificado y enlace de reseñas (`contact.reviewUrl`) en emails y `/guia` · flota de producción con
+4 coches y fotos **de relleno** (Ford, Tesla, «Furgoneta 8 plazas» y «SUV premium»: los dos últimos inventados para
+mostrar el carrusel; el cliente debe poner los suyos o borrarlos).
+**Falta (configuración):** **SumUp real** en producción (clave `sup_sk_…` y merchant code de la cuenta normal; hoy el pago
+online sale como «no disponible») y pago real de prueba · cambiar la contraseña `admin` de producción (salió en el chat) ·
+borrar en Railway `meticulous-vitality` y `taxi-web Copy` · bucket R2 + token para copias fuera del volumen · borrar en
+Resend la clave antigua · poner la web en el campo «Sitio web» de la ficha de Google.
+**Falta (cliente):** **tabla de tarifas oficiales** para `/admin/tarifas` (con licencia de taxi no puede cobrar por encima
+de las tarifas oficiales de Ayuntamiento/Junta) · fotos reales de la flota y fotos con licencia para `/guia` (las actuales
+son capturas de Google/webs de terceros) · hojas de reclamaciones de la Junta · Seguro Obligatorio de Viajeros · revisar
+`/condiciones` con un asesor · pedir reseñas en Google a cada cliente.
