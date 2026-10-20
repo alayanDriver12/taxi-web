@@ -8,6 +8,7 @@ import { fill, withLang } from './util.js';
 import { HOME, ROUTES_INDEX, GROUP_PATH, resolvePage, pagePath, routeList, routePath, routeVars } from './routes.js';
 import { RoutePage, RoutesIndex, GroupPage } from './RoutePage.jsx';
 import Account, { accountTokenFromPath } from './Account.jsx';
+import FloatingActions from './FloatingActions.jsx';
 
 // Idioma: lo marca la URL (/en/…, o ?lang=en en las páginas legales y de pago).
 // En la página de pago, si no viene, se usa el del navegador.
@@ -135,6 +136,7 @@ export default function App({ content, url }) {
             : <RoutesIndex content={content} t={t} lang={lang} notFound={page.kind === 'notfound'} />}
         </main>
         {footer}
+        <FloatingActions t={t} lang={lang} bookHref={bookHref} />
       </div>
     );
   }
@@ -152,9 +154,14 @@ export default function App({ content, url }) {
             <span className="text-[10px] tracking-[0.32em] text-[#C5A46A]">{t.hero.badge}</span>
           </div>
         )}
+        {/* En ordenador: el mismo póster desenfocado de fondo, para que no queden laterales vacíos */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden md:block">
+          <img src={img.hero} alt="" className="w-full h-full object-cover blur-2xl scale-110 opacity-60" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#080808]/30 via-[#080808]/45 to-[#0A0A0A]" />
+        </div>
         {/* Algo más baja que la pantalla: asoma la sección siguiente y se ve que hay que bajar */}
         <div className="relative w-full max-w-[1600px] mx-auto flex items-center justify-center pt-6 md:pt-8 px-0 md:px-10">
-          <img src={img.hero} alt={t.hero.alt} width="1024" height="683" fetchpriority="high" className="w-auto max-w-full h-auto max-h-[62vh] md:max-h-[58vh] object-contain object-center select-none md:rounded-[24px]" />
+          <img src={img.hero} alt={t.hero.alt} width="1024" height="683" fetchpriority="high" className="w-auto max-w-full h-auto max-h-[62vh] md:max-h-[58vh] object-contain object-center select-none md:rounded-[24px] md:shadow-[0_30px_80px_-10px_rgba(0,0,0,0.7)]" />
         </div>
         <a href="#experiencia" className="group relative z-20 mt-4 mb-6 md:mb-8 flex flex-col items-center gap-2" aria-label={t.hero.scroll}>
           <span className="text-[10px] tracking-[0.4em] text-white/60 group-hover:text-white transition">{t.hero.scroll}</span>
@@ -334,6 +341,7 @@ export default function App({ content, url }) {
       </section>
 
       {footer}
+      <FloatingActions t={t} lang={lang} bookHref={bookHref} />
     </div>
   );
 }

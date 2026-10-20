@@ -8,3 +8,9 @@ h1, h2, h3, .serif { font-family: 'Cormorant Garamond', serif; }
 /* iOS Safari: los campos de fecha y hora traen un ancho mínimo propio y se salen de la caja en el móvil */
 input[type="date"], input[type="time"] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; display: block; }
 input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-date-and-time-value { text-align: left; }
+
+/* Desplazamiento suave al pulsar enlaces de la página (Descubrir, menú, Reservar), salvo si el usuario prefiere menos movimiento.
+   scroll-margin-top: que la cabecera fija no tape el título de la sección */
+html { scroll-behavior: smooth; }
+section[id] { scroll-margin-top: 80px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
