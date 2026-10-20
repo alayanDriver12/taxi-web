@@ -10,14 +10,14 @@ const DEFAULTS = [
   {
     id: 'ford',
     images: ['/img/ford.jpg'],
-    ES: { name: 'FORD • ALAYAN', plate: 'Matrícula ALAYAN', desc: 'Berlina ejecutiva, híbrida enchufable, 4 pax + 4 maletas grandes. Ideal aeropuerto y AVE.', badge: '' },
-    EN: { name: 'FORD • ALAYAN', plate: 'ALAYAN plate', desc: 'Executive sedan, plug-in hybrid, 4 pax + 4 large bags. Ideal for airport & AVE.', badge: '' }
+    ES: { name: 'FORD E-TOURNEO • ALAYAN', plate: 'Hasta 8 plazas', desc: 'Ford E-Tourneo Custom 100 % eléctrica: hasta 8 pasajeros con maletero XXL. Ideal para aeropuerto, grupos y familias.', badge: '100 % ELÉCTRICO' },
+    EN: { name: 'FORD E-TOURNEO • ALAYAN', plate: 'Up to 8 seats', desc: '100% electric Ford E-Tourneo Custom: up to 8 passengers with an XXL boot. Ideal for airport, groups and families.', badge: '100% ELECTRIC' }
   },
   {
     id: 'tesla',
     images: ['/img/tesla.jpg'],
-    ES: { name: 'TESLA • ALAYAN', plate: '100% eléctrico • Alta gama', desc: 'Silencio absoluto, cero emisiones, tech premium. Para clientes que exigen lo mejor.', badge: 'HÍBRIDO ENCHUFABLE ALTA GAMA' },
-    EN: { name: 'TESLA • ALAYAN', plate: '100% electric • Premium', desc: 'Absolute silence, zero emissions, premium tech. For clients who demand the best.', badge: 'PREMIUM PLUG-IN HYBRID' }
+    ES: { name: 'TESLA • ALAYAN', plate: '100% eléctrico • Alta gama', desc: 'Silencio absoluto, cero emisiones, tech premium. Para clientes que exigen lo mejor.', badge: '100 % ELÉCTRICO' },
+    EN: { name: 'TESLA • ALAYAN', plate: '100% electric • Premium', desc: 'Absolute silence, zero emissions, premium tech. For clients who demand the best.', badge: '100% ELECTRIC' }
   }
 ];
 

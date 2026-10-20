@@ -45,20 +45,20 @@ module.exports = {
       left: 'Rápido. Seguro. Siempre a tiempo.',
       right: 'Movilidad que se adapta a ti.',
       items: ['CONFORT', 'SEGURIDAD', 'PUNTUALIDAD', 'DISCRECIÓN'],
-      hybrid: 'Silencio y Eco — HÍBRIDO ENCHUFABLE ALTA GAMA'
+      hybrid: 'Silencio y Eco — 100 % ELÉCTRICOS'
     },
     fleet: {
       title: 'Flota real. Blanca. Impecable.',
-      subtitle: 'Vehículos de alta gama, híbridos enchufables, revisados diariamente. Silencio, climatización perfecta, maletero XXL.',
+      subtitle: 'Ford E-Tourneo Custom de 8 plazas y Tesla, 100 % eléctricos y revisados a diario. Silencio, climatización perfecta y maletero XXL.',
     },
     rates: {
       fixedKicker: 'TARIFAS FIJAS',
       fixedTitle: 'Aeropuerto ↔ Sevilla',
       fixedAccent: 'precio cerrado',
       fixedSubtitle: 'Aeropuerto de Sevilla (SVQ) ↔ Sevilla ciudad. Transfer directo sin paradas, con seguimiento del vuelo incluido.',
-      smallTitle: 'Berlina / SUV premium',
+      smallTitle: 'Tesla 100 % eléctrico',
       smallPoints: ['Maletas incluidas', 'Seguimiento del vuelo', 'Meet & Greet'],
-      largeTitle: 'Furgoneta 8 plazas',
+      largeTitle: 'Ford E-Tourneo · 8 plazas',
       largePoints: ['Grupos y equipaje grande', 'Ideal para familias y amigos', 'Sillas infantiles bajo petición'],
       direct: 'TRANSFER DIRECTO SIN PARADAS',
       book: 'RESERVAR',
@@ -188,8 +188,8 @@ module.exports = {
       vatNote: 'Precios con IVA incluido. El precio final se confirma antes del pago.',
       cards: [
         { name: 'Económico', price: 'Desde 35€', features: ['Vehículo confort', '1-4 pasajeros', 'Aeropuerto / Estación', 'Tracking vuelo incluido'], popular: false },
-        { name: 'Confort', price: 'Desde 55€', features: ['Ford Alayan híbrido', 'Agua de cortesía', 'Cartel bienvenida', 'Cancelación 24h gratis'], popular: true },
-        { name: 'VIP', price: 'Desde 90€', features: ['Tesla / Mercedes E', 'Chofer trajeado', 'Disposición por horas', 'Pueblos Blancos y Costa'], popular: false }
+        { name: 'Confort', price: 'Desde 55€', features: ['Ford E-Tourneo eléctrica', 'Agua de cortesía', 'Cartel bienvenida', 'Cancelación 24h gratis'], popular: true },
+        { name: 'VIP', price: 'Desde 90€', features: ['Tesla 100 % eléctrico', 'Chofer trajeado', 'Disposición por horas', 'Pueblos Blancos y Costa'], popular: false }
       ]
     },
     drivers: {
@@ -236,7 +236,7 @@ module.exports = {
       includesTitle: 'INCLUYE',
       includes: ['Tracking vuelo', 'Meet & Greet', 'Agua de cortesía', 'Silla infantil (5 €)', 'Espera por retraso', 'Cartel personalizado'],
       cancel: 'Política: cancelación gratuita hasta 24h antes. Después, 50%. No-show 100%.',
-      fleetNote: 'Flota blanca real • Híbrida enchufable • Silencio y Eco',
+      fleetNote: 'Flota blanca real • 100 % eléctrica • Silencio y Eco',
       fleetSign: 'MÁS QUE UN TRASLADO UNA EXPERIENCIA — Firma Alayan',
       modes: { airport: 'Aeropuerto ↔ Sevilla', route: 'Pueblos y ciudades', custom: 'Otro trayecto' },
       directions: { toCity: 'Aeropuerto → Sevilla', toAirport: 'Sevilla → Aeropuerto', fromSevilla: 'Desde Sevilla', toSevilla: 'Hacia Sevilla' },
@@ -355,7 +355,7 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
     footer: {
       tagline: 'TU DESTINO, NUESTRA PRIORIDAD.',
       slogan: 'MÁS QUE UN TRASLADO, UNA EXPERIENCIA',
-      description: 'Confort, seguridad, puntualidad, discreción. Silencio y Eco — híbrido enchufable alta gama.',
+      description: 'Confort, seguridad, puntualidad, discreción. Silencio y Eco — flota 100 % eléctrica.',
       firm: 'Alayan',
       services: ['AEROPUERTOS SEVILLA MÁLAGA JEREZ Y MÁS', 'ESTACIONES TREN AVE', 'HOTELES Y RESORTS', 'EVENTOS SOCIALES Y EMPRESARIALES', 'VIAJES PRIVADOS POR TODA ANDALUCÍA'],
       rights: '© {year} ALAYAN DRIVER - TRANSFER EN ANDALUCÍA. Todos los derechos reservados.',
@@ -398,20 +398,20 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
       left: 'Fast. Safe. Always on time.',
       right: 'Mobility that adapts to you.',
       items: ['COMFORT', 'SAFETY', 'PUNCTUALITY', 'DISCRETION'],
-      hybrid: 'Silence & Eco — PREMIUM PLUG-IN HYBRID'
+      hybrid: 'Silence & Eco — 100% ELECTRIC'
     },
     fleet: {
       title: 'Real fleet. White. Impeccable.',
-      subtitle: 'Premium plug-in hybrid vehicles, checked daily. Silence, perfect climate, XXL trunk.',
+      subtitle: '8-seater Ford E-Tourneo Custom and Tesla, 100% electric and checked daily. Silence, perfect climate and XXL boot.',
     },
     rates: {
       fixedKicker: 'FIXED RATES',
       fixedTitle: 'Airport ↔ Seville',
       fixedAccent: 'fixed price',
       fixedSubtitle: 'Seville Airport (SVQ) ↔ Seville city. Direct transfer with no stops, flight tracking included.',
-      smallTitle: 'Premium sedan / SUV',
+      smallTitle: '100% electric Tesla',
       smallPoints: ['Luggage included', 'Flight tracking', 'Meet & Greet'],
-      largeTitle: '8-seater van',
+      largeTitle: 'Ford E-Tourneo · 8 seats',
       largePoints: ['Groups and large luggage', 'Ideal for families and friends', 'Child seats on request'],
       direct: 'DIRECT TRANSFER, NO STOPS',
       book: 'BOOK',
@@ -541,8 +541,8 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
       vatNote: 'Prices include VAT. The final price is confirmed before payment.',
       cards: [
         { name: 'Economy', price: 'From €35', features: ['Comfort vehicle', '1-4 passengers', 'Airport / Station', 'Flight tracking included'], popular: false },
-        { name: 'Comfort', price: 'From €55', features: ['Ford Alayan hybrid', 'Complimentary water', 'Welcome sign', 'Free cancellation 24h'], popular: true },
-        { name: 'VIP', price: 'From €90', features: ['Tesla / Mercedes E', 'Suited chauffeur', 'Hourly disposal', 'White Villages & Coast'], popular: false }
+        { name: 'Comfort', price: 'From €55', features: ['Electric Ford E-Tourneo', 'Complimentary water', 'Welcome sign', 'Free cancellation 24h'], popular: true },
+        { name: 'VIP', price: 'From €90', features: ['100% electric Tesla', 'Suited chauffeur', 'Hourly disposal', 'White Villages & Coast'], popular: false }
       ]
     },
     drivers: {
@@ -589,7 +589,7 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
       includesTitle: 'INCLUDES',
       includes: ['Flight tracking', 'Meet & Greet', 'Complimentary water', 'Child seat (€5)', 'Waiting for delays', 'Custom welcome sign'],
       cancel: 'Policy: free cancellation up to 24h before. After, 50%. No-show 100%.',
-      fleetNote: 'Real white fleet • Plug-in hybrid • Silence & Eco',
+      fleetNote: 'Real white fleet • 100% electric • Silence & Eco',
       fleetSign: 'MORE THAN A TRANSFER, AN EXPERIENCE — Alayan signature',
       modes: { airport: 'Airport ↔ Seville', route: 'Towns and cities', custom: 'Other trip' },
       directions: { toCity: 'Airport → Seville', toAirport: 'Seville → Airport', fromSevilla: 'From Seville', toSevilla: 'To Seville' },
@@ -708,7 +708,7 @@ If you think this is a mistake or want to book another date, reply to this email
     footer: {
       tagline: 'YOUR DESTINATION, OUR PRIORITY.',
       slogan: 'MORE THAN A TRANSFER, AN EXPERIENCE',
-      description: 'Comfort, safety, punctuality, discretion. Silence & Eco — premium plug-in hybrid.',
+      description: 'Comfort, safety, punctuality, discretion. Silence & Eco — 100% electric fleet.',
       firm: 'Alayan',
       services: ['AIRPORTS SEVILLE MALAGA JEREZ & MORE', 'AVE TRAIN STATIONS', 'HOTELS & RESORTS', 'SOCIAL & CORPORATE EVENTS', 'PRIVATE TRIPS ALL OVER ANDALUSIA'],
       rights: '© {year} ALAYAN DRIVER - TRANSFER IN ANDALUSIA. All rights reserved.',
