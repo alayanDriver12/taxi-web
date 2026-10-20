@@ -152,16 +152,14 @@ export default function App({ content, url }) {
             <span className="text-[10px] tracking-[0.32em] text-[#C5A46A]">{t.hero.badge}</span>
           </div>
         )}
-        <div className="relative w-full max-w-[1600px] mx-auto flex items-center justify-center py-10 md:py-0">
-          <img src={img.hero} alt={t.hero.alt} className="w-full h-auto max-h-[92vh] object-contain object-center select-none" />
-          <div className="pointer-events-none absolute bottom-0 inset-x-0 h-[18%] bg-gradient-to-t from-[#0A0A0A] to-transparent" />
+        {/* Algo más baja que la pantalla: asoma la sección siguiente y se ve que hay que bajar */}
+        <div className="relative w-full max-w-[1600px] mx-auto flex items-center justify-center pt-6 md:pt-8 px-0 md:px-10">
+          <img src={img.hero} alt={t.hero.alt} width="1024" height="683" fetchpriority="high" className="w-auto max-w-full h-auto max-h-[62vh] md:max-h-[58vh] object-contain object-center select-none md:rounded-[24px]" />
         </div>
-        <div className="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-3">
-          <a href="#experiencia" className="group flex flex-col items-center gap-2">
-            <span className="text-[10px] tracking-[0.4em] text-white/50 group-hover:text-white/80 transition">{t.hero.scroll}</span>
-            <span className="h-12 w-[1px] bg-gradient-to-b from-[#C5A46A] to-transparent" />
-          </a>
-        </div>
+        <a href="#experiencia" className="group relative z-20 mt-4 mb-6 md:mb-8 flex flex-col items-center gap-2" aria-label={t.hero.scroll}>
+          <span className="text-[10px] tracking-[0.4em] text-white/60 group-hover:text-white transition">{t.hero.scroll}</span>
+          <span className="h-9 w-9 rounded-full border border-[#C5A46A]/50 grid place-items-center text-[#C5A46A] animate-bounce group-hover:bg-[#C5A46A] group-hover:text-black transition">↓</span>
+        </a>
       </section>
 
       {/* Experiencia */}
