@@ -58,6 +58,11 @@ const RENAMED = {
     'Instant quote. Protected payment. WhatsApp confirmation.': 'Instant price. Protected payment. WhatsApp confirmation.'
   }
 };
+// Email de presupuesto: antes llevaba una línea «Precio: …» que ahora va dentro del resumen
+for (const [L, line] of [['ES', 'Precio: {amount} (IVA incluido).'], ['EN', 'Price: {amount} (VAT included).']]) {
+  const NL = String.fromCharCode(10), body = defaults[L].notify.quote.body;
+  RENAMED[L][body.replace('{summary}' + NL + NL, '{summary}' + NL + NL + line + NL + NL)] = body;
+}
 const OLD_WHATSAPP = ['34600000000', '34671407527']; // número de ejemplo y el anterior del cliente
 
 function renameTexts(value, map) {

@@ -21,11 +21,20 @@ td.cobro{min-width:250px}
 #notifyDlg label.opt{display:flex;gap:8px;align-items:center;color:var(--text);font-size:14px;margin:10px 0}
 #notifyDlg select{margin-top:4px}
 #notifyDlg p{margin:0 0 6px}
+#newDlg{width:min(640px,94vw)}
+#newDlg .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+#newDlg .full{grid-column:1/-1}
+#newDlg .checks{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
+#newDlg .checks label{display:flex;gap:6px;align-items:center;color:var(--text);margin:0}
+#newDlg h3{font-size:12px;letter-spacing:.12em;color:var(--gold);margin:16px 0 8px;text-transform:uppercase}
+#doneDlg .actions{justify-content:flex-start;flex-wrap:wrap}
+@media (max-width:560px){#newDlg .grid2{grid-template-columns:1fr}}
 </style></head><body>
 <main>
   <div class="head">
     <h1>Reservas</h1>
     <div class="row" style="margin:0">
+      <button id="newBtn">+ Nueva reserva</button>
       <button class="ghost" id="reload">Actualizar</button>
       <a class="btn" href="/api/panel/bookings.csv">Exportar CSV</a>
     </div>
@@ -61,6 +70,50 @@ td.cobro{min-width:250px}
   <label class="opt"><input type="checkbox" id="nEmail" checked> <span id="nEmailLabel">Email</span></label>
   <label class="opt"><input type="checkbox" id="nWa" checked> <span id="nWaLabel">WhatsApp</span></label>
   <div class="actions"><button type="button" class="ghost" id="nCancel">No avisar</button><button type="submit" id="nSend">Avisar</button></div>
+</form></dialog>
+<dialog id="newDlg"><form method="dialog" id="newForm">
+  <h2>Nueva reserva</h2>
+  <p class="muted" style="margin:0 0 6px;font-size:13px">Para clientes que te escriben por WhatsApp o llaman. Si pones el precio, se crea su enlace de pago con SumUp para mandárselo.</p>
+  <h3>Cliente</h3>
+  <div class="grid2">
+    <div><label>Nombre *</label><input name="name" required maxlength="100"></div>
+    <div><label>Teléfono / WhatsApp *</label><input name="phone" required maxlength="30" placeholder="600 000 000"></div>
+    <div><label>Email (opcional)</label><input name="email" type="email" maxlength="120" placeholder="Sin email: todo por WhatsApp"></div>
+    <div><label>Idioma de los mensajes</label><select name="lang"><option value="ES">Español</option><option value="EN">Inglés</option></select></div>
+  </div>
+  <h3>Trayecto</h3>
+  <div class="grid2">
+    <div><label>Origen *</label><input name="origin" required maxlength="200" placeholder="Ej: Aeropuerto de Sevilla"></div>
+    <div><label>Destino *</label><input name="destination" required maxlength="200" placeholder="Ej: Hotel Alfonso XIII"></div>
+    <div><label>Fecha *</label><input name="date" type="date" required></div>
+    <div><label>Hora *</label><input name="time" type="time" required></div>
+    <div><label>Pasajeros</label><input name="pax" type="number" min="1" max="20" value="2"></div>
+    <div><label>Maletas</label><input name="luggage" type="number" min="0" max="50" value="2"></div>
+    <div><label>Vuelo (opcional)</label><input name="flight" maxlength="60"></div>
+    <div><label>Cartel (opcional)</label><input name="sign" maxlength="100"></div>
+    <div class="full checks">
+      <label><input type="checkbox" name="x_baby"> Silla de bebé</label>
+      <label><input type="checkbox" name="x_child"> Silla de niño</label>
+      <label><input type="checkbox" name="x_booster"> Alzador</label>
+      <label><input type="checkbox" name="x_pmr"> Movilidad reducida</label>
+    </div>
+    <div class="full"><label>Notas internas</label><input name="notes" maxlength="1000"></div>
+  </div>
+  <h3>Precio</h3>
+  <div class="grid2">
+    <div><label>Precio total € (con IVA)</label><input name="amount" inputmode="decimal" placeholder="Vacío = lo pones después"></div>
+    <div style="align-self:end"><label class="opt" style="display:flex;gap:8px;align-items:center;color:var(--text);margin:0 0 8px"><input type="checkbox" name="sendEmail" checked> Enviar también por email (si tiene)</label></div>
+  </div>
+  <div class="actions"><button type="button" class="ghost" id="newCancel">Cancelar</button><button type="submit" id="newSave">Crear reserva</button></div>
+</form></dialog>
+<dialog id="doneDlg"><form method="dialog">
+  <h2 id="doneTitle">Reserva creada</h2>
+  <p class="muted" id="doneText"></p>
+  <div class="actions">
+    <a class="btn" id="doneWa" target="_blank">Enviar por WhatsApp</a>
+    <button type="button" class="ghost" id="doneCopy">Copiar enlace</button>
+    <button type="submit" class="ghost">Cerrar</button>
+  </div>
 </form></dialog>
 <script src="/panel/panel.js"></script>
 <script>
@@ -131,7 +184,7 @@ function render() {
 
   $('rows').innerHTML = rows.map(r => `<tr class="${r.date < today() ? 'past' : ''}">
     <td>${r.id}<br><small>${utc(r.created_at)}</small></td>
-    <td><b>${esc(r.name)}</b>${r.company ? '<br>' + esc(r.company) : ''}<br><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a><br><small>${esc(r.email)}</small></td>
+    <td><b>${esc(r.name)}</b>${r.company ? '<br>' + esc(r.company) : ''}<br><a href="tel:${esc(r.phone)}">${esc(r.phone)}</a><br><small>${r.email ? esc(r.email) : 'sin email'}</small>${r.source === 'panel' ? '<br><span class="tag">📱 creada en el panel</span>' : ''}</td>
     <td>${esc(r.origin)}<br>→ ${esc(r.destination)}<br><small>${MODE_LABELS[r.route_mode] || ''}${r.tariff ? ' · ' + (r.tariff === 'T2' ? 'Tarifa 2' : 'Tarifa 1') : ''}</small></td>
     <td><b>${esc(r.date)}</b><br>${esc(r.time)}</td>
     <td>${r.pax} pax · ${r.luggage} maletas${r.flight ? '<br>✈ ' + esc(r.flight) : ''}${r.sign ? '<br>🪧 ' + esc(r.sign) : ''}${extrasText(r) ? '<br>➕ ' + esc(extrasText(r)) : ''}</td>
@@ -181,7 +234,9 @@ function openNotify(r, kind, title) {
   $('nWho').textContent = `¿Avisamos a ${r.name}? El mensaje sale en ${r.lang === 'EN' ? 'inglés' : 'español'}.`;
   $('nKind').querySelector('[value=quote]').disabled = !r.payUrl;
   $('nKind').value = kind;
-  $('nEmailLabel').textContent = `Email a ${r.email}`;
+  $('nEmailLabel').textContent = r.email ? `Email a ${r.email}` : 'Email (esta reserva no tiene)';
+  $('nEmail').checked = !!r.email;
+  $('nEmail').disabled = !r.email;
   $('nWaLabel').textContent = `WhatsApp a ${r.phone} (se abre con el mensaje escrito)`;
   $('nSend').disabled = false;
   $('notifyDlg').showModal();
@@ -209,9 +264,11 @@ $('rows').addEventListener('click', async e => {
     t.disabled = true;
     try {
       await api('/api/panel/bookings/' + d.quote, { method: 'PATCH', body: { amount } });
-      const q = await api(`/api/panel/bookings/${d.quote}/quote`, { method: 'POST', body: {} });
+      const r = all.find(x => String(x.id) === d.quote);
+      const q = await api(`/api/panel/bookings/${d.quote}/quote`, { method: 'POST', body: r?.email ? {} : { email: false } });
       await navigator.clipboard?.writeText(q.url).catch(() => {});
-      toast(q.emailed
+      if (!r?.email) toast('Enlace copiado. Esta reserva no tiene email: mándalo por WhatsApp.');
+      else toast(q.emailed
         ? 'Presupuesto enviado por email y enlace copiado. Si quieres, mándalo también por WhatsApp.'
         : 'Enlace copiado, pero el email no se pudo enviar: mándalo por WhatsApp.', q.emailed ? 'ok' : 'error');
       await load();
@@ -237,6 +294,34 @@ $('rows').addEventListener('click', async e => {
     catch (err) { toast(err.message, 'error'); }
   }
 });
+
+// ---------- Nueva reserva a mano ----------
+$('newBtn').onclick = () => {
+  $('newForm').reset();
+  $('newForm').date.min = today();
+  $('newSave').disabled = false;
+  $('newDlg').showModal();
+};
+$('newCancel').onclick = () => $('newDlg').close();
+$('newForm').onsubmit = async e => {
+  e.preventDefault();
+  const f = Object.fromEntries(new FormData($('newForm')));
+  const extras = {};
+  for (const k of ['baby', 'child', 'booster', 'pmr']) if (f['x_' + k]) extras[k] = true;
+  const body = { ...f, extras, sendEmail: !!f.sendEmail };
+  $('newSave').disabled = true;
+  try {
+    const d = await api('/api/panel/bookings', { method: 'POST', body });
+    $('newDlg').close();
+    await load();
+    if (!d.url) return toast(`Reserva #${d.id} creada. Ponle precio en la tabla cuando lo tengas.`);
+    $('doneTitle').textContent = `Reserva #${d.id} creada`;
+    $('doneText').textContent = (d.emailed ? 'Presupuesto enviado por email. ' : '') + 'Mándale el enlace de pago por WhatsApp (se abre con el mensaje ya escrito) o cópialo.';
+    $('doneWa').href = d.wa;
+    $('doneCopy').onclick = () => navigator.clipboard?.writeText(d.url).then(() => toast('Enlace copiado'), () => toast('No se pudo copiar', 'error'));
+    $('doneDlg').showModal();
+  } catch (err) { toast(err.message, 'error'); $('newSave').disabled = false; }
+};
 
 ['q', 'status', 'view'].forEach(id => $(id).addEventListener('input', render));
 $('reload').onclick = load;

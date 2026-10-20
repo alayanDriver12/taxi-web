@@ -117,7 +117,7 @@ const LEGAL_FIELDS = [
 ];
 const LEGAL_REQUIRED = ['owner', 'nif', 'address', 'email', 'phone', 'license'];
 const PATH_LABELS = {
-  'brand.name': 'Nombre de la marca', 'nav.book': 'Botón reservar', 'notify.signature': 'Firma', 'notify.received': 'Solicitud recibida (automático)',
+  'brand.name': 'Nombre de la marca', 'nav.book': 'Botón reservar', 'notify.signature': 'Firma', 'notify.button': 'Botones del email', 'notify.button.pay': 'Botón pagar (presupuesto)', 'notify.button.view': 'Botón ver mi reserva', 'notify.help': 'Texto de ayuda al pie del email', 'notify.received': 'Solicitud recibida (automático)',
   'notify.quote': 'Presupuesto (al pulsar «Enviar presupuesto»)', 'notify.paid': 'Pago recibido (automático)',
   'notify.confirmed': 'Reserva confirmada (al marcarla en el panel)', 'notify.cancelled': 'Reserva cancelada (al marcarla en el panel)',
   'notify.received.subject': 'Asunto', 'notify.quote.subject': 'Asunto', 'notify.paid.subject': 'Asunto',
@@ -148,6 +148,8 @@ const HINTS = {
   'notify.confirmed.body': 'Se usa para el email y para el WhatsApp. Puedes usar: {name} nombre, {id} nº de reserva, {amount} precio, {summary} resumen del trayecto, {link} enlace de la reserva.',
   'notify.cancelled.body': 'Se usa para el email y para el WhatsApp. Puedes usar: {name} nombre, {id} nº de reserva, {amount} precio, {summary} resumen del trayecto, {link} enlace de la reserva.',
   'notify.signature': 'Se añade al final de cada aviso.',
+  'notify.button.pay': '{amount} se sustituye por el precio. Es el botón dorado del email de presupuesto.',
+  'notify.help': 'Sale al pie de todos los emails al cliente, encima de la firma.',
   'payment.hello': '{name} se sustituye por el nombre del cliente.',
   'payment.pay': '{amount} se sustituye por el precio.',
   'payment.paidText': '{id} se sustituye por el número de reserva.',

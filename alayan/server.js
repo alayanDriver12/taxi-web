@@ -58,6 +58,7 @@ if (!bookingCols.includes('lang')) db.exec("ALTER TABLE bookings ADD COLUMN lang
 if (!bookingCols.includes('route_mode')) db.exec("ALTER TABLE bookings ADD COLUMN route_mode TEXT NOT NULL DEFAULT 'custom'"); // airport | route | custom
 if (!bookingCols.includes('destination_id')) db.exec('ALTER TABLE bookings ADD COLUMN destination_id TEXT');
 if (!bookingCols.includes('extras')) db.exec('ALTER TABLE bookings ADD COLUMN extras TEXT'); // JSON: sillas, movilidad reducida…
+if (!bookingCols.includes('source')) db.exec("ALTER TABLE bookings ADD COLUMN source TEXT NOT NULL DEFAULT 'web'"); // web | panel (creada a mano)
 if (!bookingCols.includes('tariff')) db.exec('ALTER TABLE bookings ADD COLUMN tariff TEXT'); // T1 | T2 si el precio es automático
 
 // Conservación (política de privacidad, apartado 4): las solicitudes que no llegaron a contratarse
@@ -109,7 +110,8 @@ if (!auth.countUsers()) {
 // ---------- App ----------
 const app = express();
 app.set('trust proxy', 1);
-app.use(helmet({ contentSecurityPolicy: false }));
+// crossOriginResourcePolicy: el logo y las fotos se muestran también dentro de los emails (otro origen)
+app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use('/api/panel', express.json({ limit: '300kb' })); // el contenido de la web pesa más que una reserva
 app.use(express.json({ limit: '50kb' }));
 
@@ -309,6 +311,38 @@ panel.get('/bookings', (req, res) => {
       };
     })
   });
+});
+
+// Reserva creada a mano desde el panel (clientes que escriben por WhatsApp o llaman).
+// Email opcional: sin él, todo se le manda por WhatsApp. Con precio, se genera ya su enlace de pago.
+panel.post('/bookings', async (req, res) => {
+  const b = req.body || {};
+  const extras = Object.fromEntries(EXTRAS.filter(k => b.extras?.[k] === true).map(k => [k, true]));
+  if (extras.other) extras.otherText = clean(b.extrasOther, 200);
+  const d = {
+    name: clean(b.name, 100), company: clean(b.company, 100), phone: clean(b.phone, 30), email: clean(b.email, 120),
+    origin: clean(b.origin), destination: clean(b.destination), date: clean(b.date, 10), time: clean(b.time, 5),
+    pax: Math.min(Math.max(parseInt(b.pax) || 1, 1), 20), luggage: Math.min(Math.max(parseInt(b.luggage) || 0, 0), 50),
+    flight: clean(b.flight, 60), sign: clean(b.sign, 100), notes: clean(b.notes, 1000),
+    lang: b.lang === 'EN' ? 'EN' : 'ES', extras: Object.keys(extras).length ? JSON.stringify(extras) : null
+  };
+  if (!d.name || !d.phone || !d.origin || !d.destination || !d.date || !d.time) return res.status(400).json({ error: 'Faltan campos obligatorios: nombre, teléfono, origen, destino, fecha y hora.' });
+  if (d.email && !/^\S+@\S+\.\S+$/.test(d.email)) return res.status(400).json({ error: 'Email no válido (puedes dejarlo vacío).' });
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date) || d.date < new Date().toISOString().slice(0, 10)) return res.status(400).json({ error: 'La fecha debe ser hoy o posterior.' });
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.time)) return res.status(400).json({ error: 'Hora no válida.' });
+  let amount = null;
+  if (b.amount !== undefined && String(b.amount).trim() !== '') {
+    amount = Math.round(Number(String(b.amount).replace(',', '.')) * 100) / 100;
+    if (!(amount > 0 && amount < 100000)) return res.status(400).json({ error: 'Precio no válido.' });
+  }
+  const id = db.prepare(`INSERT INTO bookings (name,company,phone,email,origin,destination,date,time,pax,luggage,flight,sign,notes,lang,extras,amount_eur,route_mode,source)
+    VALUES (@name,@company,@phone,@email,@origin,@destination,@date,@time,@pax,@luggage,@flight,@sign,@notes,@lang,@extras,@amount,'custom','panel')`)
+    .run({ ...d, amount }).lastInsertRowid;
+  if (!amount) return res.status(201).json({ id });
+  const url = payments.ensureQuote(id);
+  const row = db.prepare('SELECT * FROM bookings WHERE id=?').get(id);
+  const emailed = d.email && b.sendEmail === true ? await notifier.emailClient('quote', row) : false;
+  res.status(201).json({ id, url, emailed, wa: notifier.whatsappUrl('quote', row) });
 });
 
 panel.patch('/bookings/:id', (req, res) => {

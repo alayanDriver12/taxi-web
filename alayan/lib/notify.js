@@ -1,6 +1,8 @@
 // Avisos al cliente (email automático y WhatsApp en un clic) y a Alayan (email).
 // Los textos salen del contenido editable (sección «Avisos al cliente» en /admin), en el idioma de la reserva.
 
+const { renderEmail, renderPlain, bodyHtml, summaryCard, button } = require('./emailTemplate');
+
 const fill = (tpl, vars) => String(tpl ?? '').replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
 
 // wa.me necesita el número con prefijo: si es un móvil español de 9 cifras se añade 34
@@ -30,7 +32,8 @@ function createNotifier({ content, mailer, payments, baseUrl, notifyEmail }) {
       `• ${p.when}: ${b.date} · ${b.time}`,
       `• ${p.pax}: ${b.pax} · ${p.luggage}: ${b.luggage}`,
       b.flight ? `• ${p.flight}: ${b.flight}` : null,
-      extrasText(b, t) ? `• ${t.booking.extrasTitle.toLowerCase()}: ${extrasText(b, t)}` : null
+      extrasText(b, t) ? `• ${t.booking.extrasTitle.toLowerCase()}: ${extrasText(b, t)}` : null,
+      b.amount_eur > 0 ? `• ${p.total}: ${money(b.amount_eur, langOf(b))}` : null
     ].filter(Boolean).join('\n');
   }
 
@@ -45,14 +48,63 @@ function createNotifier({ content, mailer, payments, baseUrl, notifyEmail }) {
       summary: summary(b, t),
       link: b.pay_token ? payments.payUrl(b.pay_token) + (L === 'EN' ? '?lang=en' : '') : baseUrl
     };
-    return { subject: fill(tpl.subject, vars), text: `${fill(tpl.body, vars)}\n\n${t.notify.signature}` };
+    const subject = fill(tpl.subject, vars);
+    return { subject, text: `${fill(tpl.body, vars)}\n\n${t.notify.signature}`, html: htmlMessage(kind, b, t, L, vars, subject) };
+  }
+
+  // ---------- HTML (diseño en lib/emailTemplate.js) ----------
+  const absolute = u => (/^https?:/.test(u) ? u : baseUrl + u);
+  const longDate = (d, L) => {
+    const x = new Date(`${d}T12:00:00Z`);
+    if (Number.isNaN(x.getTime())) return d;
+    const s = x.toLocaleDateString(L === 'EN' ? 'en-GB' : 'es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+
+  // Cabecera y pie comunes: logo, contacto, datos del titular y enlaces legales
+  function chrome(t, L) {
+    const c = content.get(), lg = c.legal, q = L === 'EN' ? '?lang=en' : '';
+    return {
+      logoUrl: absolute(c.images.logo),
+      brand: t.brand.name,
+      tagline: t.brand.tagline,
+      footer: {
+        help: t.notify.help,
+        signature: t.notify.signature,
+        waUrl: c.contact.whatsapp ? `https://wa.me/${c.contact.whatsapp}` : '',
+        phone: lg.phone,
+        legal: [lg.owner, lg.nif && `NIF ${lg.nif}`, lg.address].filter(Boolean).join(' · '),
+        links: [
+          { href: baseUrl + '/privacidad' + q, label: t.footer.legal.privacy },
+          { href: baseUrl + '/condiciones' + q, label: t.footer.legal.terms }
+        ]
+      }
+    };
+  }
+
+  function htmlMessage(kind, b, t, L, vars, subject) {
+    const p = t.payment;
+    const card = summaryCard([
+      [p.route, `${b.origin} → ${b.destination}`],
+      [p.when, `${longDate(b.date, L)} · ${b.time}`],
+      [p.pax, `${b.pax} · ${p.luggage}: ${b.luggage}`],
+      [p.flight, b.flight],
+      [t.booking.extrasTitle, extrasText(b, t)]
+    ], b.amount_eur > 0 ? [p.total, vars.amount] : null);
+    const label = kind === 'quote' && b.amount_eur > 0 ? fill(t.notify.button.pay, vars) : t.notify.button.view;
+    // Los demás {huecos} se rellenan; {summary} y {link} en su propia línea pasan a ser tarjeta y botón
+    const body = fill(t.notify[kind].body, { ...vars, summary: '{summary}', link: '{link}' });
+    const html = bodyHtml(body, { '{summary}': card, '{link}': button(vars.link, label) })
+      .replace(/[{]summary[}]/g, '')
+      .replace(/[{]link[}]/g, `<a href="${vars.link}" style="color:#9a7b45">${vars.link}</a>`);
+    return renderEmail({ lang: L, preheader: subject, content: html, ...chrome(t, L) });
   }
 
   const adminEmail = () => notifyEmail || content.get().legal.email;
 
   function emailClient(kind, b) {
     const m = message(kind, b);
-    return mailer.send({ to: b.email, subject: m.subject, text: m.text, bookingId: b.id, kind, replyTo: adminEmail() });
+    return mailer.send({ to: b.email, subject: m.subject, text: m.text, html: m.html, bookingId: b.id, kind, replyTo: adminEmail() });
   }
 
   function whatsappUrl(kind, b) {
@@ -60,7 +112,9 @@ function createNotifier({ content, mailer, payments, baseUrl, notifyEmail }) {
   }
 
   function emailAdmin(subject, lines, b) {
-    return mailer.send({ to: adminEmail(), subject, text: lines.filter(Boolean).join('\n'), bookingId: b.id, kind: 'admin', replyTo: b.email });
+    const text = lines.filter(Boolean).join('\n');
+    const { footer, ...head } = chrome(content.get().ES, 'ES'); // aviso interno: sin pie para clientes
+    return mailer.send({ to: adminEmail(), subject, text, html: renderPlain({ text, ...head }), bookingId: b.id, kind: 'admin', replyTo: b.email || undefined });
   }
 
   // ---------- Eventos ----------

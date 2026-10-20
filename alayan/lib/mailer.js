@@ -20,7 +20,7 @@ function createMailer(db, { apiKey, from, replyTo, siteUrl, brand }) {
   const mode = apiKey && from ? 'real' : 'test';
 
   // Nunca lanza: un fallo de email no debe romper una reserva ni un pago
-  async function send({ to, subject, text, bookingId = null, kind, replyTo: rt }) {
+  async function send({ to, subject, text, html, bookingId = null, kind, replyTo: rt }) {
     if (!to) return false;
     if (mode === 'test') {
       log.run(bookingId, kind, to, subject, 'simulated', null);
@@ -31,7 +31,7 @@ function createMailer(db, { apiKey, from, replyTo, siteUrl, brand }) {
       const r = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from, to: [to], subject, text, html: toHtml(text, siteUrl, brand), reply_to: rt || replyTo || undefined })
+        body: JSON.stringify({ from, to: [to], subject, text, html: html || toHtml(text, siteUrl, brand), reply_to: rt || replyTo || undefined })
       });
       if (!r.ok) throw new Error(`Resend ${r.status}: ${(await r.text()).slice(0, 300)}`);
       log.run(bookingId, kind, to, subject, 'sent', null);

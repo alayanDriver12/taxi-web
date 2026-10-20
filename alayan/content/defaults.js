@@ -184,6 +184,8 @@ module.exports = {
     },
     notify: {
       signature: 'Alayan Driver · Transfer en Andalucía',
+      button: { pay: 'Pagar {amount}', view: 'Ver mi reserva' },
+      help: '¿Dudas o algún cambio? Responde a este email o escríbenos por WhatsApp.',
       received: {
         subject: 'Hemos recibido tu solicitud de reserva #{id}',
         body: `Hola, {name}:
@@ -201,8 +203,6 @@ Gracias por confiar en nosotros.`
 
 Este es el precio de tu transfer:
 {summary}
-
-Precio: {amount} (IVA incluido).
 
 Puedes revisar los detalles y pagar de forma segura aquí:
 {link}
@@ -445,6 +445,8 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
     },
     notify: {
       signature: 'Alayan Driver · Transfers in Andalusia',
+      button: { pay: 'Pay {amount}', view: 'View my booking' },
+      help: 'Any questions or changes? Reply to this email or message us on WhatsApp.',
       received: {
         subject: 'We have received your booking request #{id}',
         body: `Hello {name},
@@ -462,8 +464,6 @@ Thank you for choosing us.`
 
 Here is the price of your transfer:
 {summary}
-
-Price: {amount} (VAT included).
 
 You can check the details and pay securely here:
 {link}
