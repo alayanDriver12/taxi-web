@@ -63,6 +63,14 @@ con la cuenta `alayan.driver@gmail.com`, proyecto `alayan-driver`, servicio `tax
 El proyecto antiguo (`meticulous-vitality`, en la cuenta del desarrollador) queda obsoleto: borrarlo cuando el nuevo
 esté validado.
 
+**Dominio (20 oct 2026):** `alayandriver.com` (registrado en IONOS, DNS en Cloudflare con la cuenta del cliente).
+En Cloudflare: CNAME `@` → `bu0m3b5d.up.railway.app` y `www` → `x23l38kf.up.railway.app` en **Proxied** (naranja),
+SSL/TLS en **Full**, TXT `_railway-verify` y `_railway-verify.www` (verificación de Railway), registros de Resend
+(`send`, `rsend`, `resend._domainkey`, `_dmarc`, en gris) y `google-site-verification` (Search Console).
+Producción: `BASE_URL=https://alayandriver.com`, `BEHIND_CLOUDFLARE=true`. **Los dominios propios en Railway van con
+el puerto automático** (`targetPort` vacío): con 3000 fijo daban 502, porque Railway arranca la app en su propio `PORT`.
+`www` redirige 301 al dominio raíz desde el servidor.
+
 Despliegue automático: cada entorno tiene su *deployment trigger* (staging → `develop`, production → `main`). Si un push
 no despliega, comprobar con la query `deploymentTriggers` y que la cuenta de GitHub del cliente sigue conectada en Railway
 (sin acceso, la API responde «no one in the project has access to it»).
