@@ -27,7 +27,7 @@ dist/                web compilada (npm run build, no se sube al repo)
 | `/admin` | admin | Contenido de la web: textos ES/EN, WhatsApp, SEO, imágenes |
 | `/admin/tarifas` | admin | Precio fijo aeropuerto, € por km, mínimo, suplemento, Tarifa 2, festivos, extras, tabla de pueblos y ciudades, cobertura |
 | `/admin/flota` | admin | Vehículos (textos ES/EN y orden) y sus fotos del carrusel (hasta 15 por coche) |
-| `/admin/empresas` | admin | Hoteles y empresas: enlace privado para reservar a cuenta (sin pago) y resumen mensual para cobrar |
+| `/admin/empresas` | admin | Hoteles y empresas: enlace privado para registrar reservas de sus clientes (sin ver precios; paga el cliente) y resumen mensual |
 | `/admin/usuarios` | admin | Alta, baja, roles y contraseñas |
 
 `ADMIN_USER` / `ADMIN_PASS` solo se usan **la primera vez** (con la tabla de usuarios vacía) para crear el

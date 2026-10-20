@@ -44,10 +44,11 @@ desarrollador: **español**. Todo el código vive en `alayan/`; el detalle técn
   (editable). «Otro trayecto» sigue el flujo de presupuesto: el admin pone precio → el cliente paga en
   `/pago/<token>` (no caduca). El checkout de SumUp se crea al pulsar «Pagar» porque **caduca a los 30 min**.
 - Todo lo de precios se edita en `/admin/tarifas` y las fotos de los coches en `/admin/flota`.
-- **Empresas/hoteles** (`/admin/empresas`): cada una tiene un enlace privado `/empresa/<token>` (sin registro, `noindex`)
-  para reservar a sus clientes con el formulario normal; la reserva queda `payment_status=a_cuenta` (sin SumUp), se
-  avisa a la empresa por email y se cobra después con el resumen mensual (marcar mes/reserva como cobrado, CSV).
-  Desactivar la empresa o «Nuevo enlace» invalida el anterior. Probado en staging (oct 2026), pendiente de validar con el cliente.
+- **Empresas/hoteles** (`/admin/empresas`): cada una tiene un enlace privado `/empresa/<token>` (sin registro, `noindex`,
+  `Disallow` en robots) para **registrar** reservas de sus clientes con el formulario normal. **El hotel no ve el precio
+  del traslado** (sí el de los extras) **ni paga: paga el cliente** a Alayan (en el coche → «Cobrado en mano» en Reservas,
+  o con el enlace de pago). Se avisa al hotel por email. Protección si el enlace se filtra: código de 128 bits, tope de
+  reservas al día por empresa (`daily_limit`, 25 por defecto), «Nuevo enlace» y desactivar. Probado en local/staging (oct 2026), pendiente de validar con el cliente.
 - El estado de un pago se verifica **siempre contra la API de SumUp**; nunca se confía en el cuerpo del webhook.
 - Se guardan todos los intentos de pago (`payments`). Una reserva pagada no admite cambios de precio.
 - Emails con **Resend** (API HTTPS) porque **Railway Hobby bloquea el SMTP**. WhatsApp = enlace `wa.me` con el

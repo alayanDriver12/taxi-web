@@ -16,16 +16,16 @@ table{min-width:720px}
 </style></head><body>
 <main>
   <div class="head"><h1>Empresas y hoteles</h1></div>
-  <p class="help" style="margin:-6px 0 16px">Cada empresa tiene un <b>enlace privado</b> para reservar sin registrarse. Sus reservas quedan <b>«a cuenta»</b> (sin pago al reservar) y aquí ves el resumen de cada mes para cobrarlo o facturarlo.</p>
+  <p class="help" style="margin:-6px 0 16px">Cada hotel o empresa tiene un <b>enlace privado</b> para registrar reservas de sus clientes sin registrarse. <b>No ven precios ni pagan</b>: el precio y el cobro se gestionan con cada cliente desde «Reservas» (en el coche o con el enlace de pago).</p>
   <div class="grid">
     <div>
       <div class="card wrap"><table>
-        <thead><tr><th>Empresa</th><th>Enlace para reservar</th><th>Pendiente de cobro</th><th>Activa</th><th></th></tr></thead>
+        <thead><tr><th>Empresa</th><th>Enlace para reservar</th><th>Reservas</th><th>Activa</th><th></th></tr></thead>
         <tbody id="rows"><tr><td colspan="5">Cargando…</td></tr></tbody>
       </table></div>
       <section class="card" id="detail" hidden>
         <div class="head" style="margin-bottom:4px"><h2 id="dTitle" style="margin:0"></h2><button class="ghost small" id="dClose">Cerrar</button></div>
-        <div class="month"><label style="margin:0">Mes del viaje</label><input type="month" id="dMonth"><button class="ghost small" id="dCsv">Descargar CSV</button><button class="small" id="dSettle">Marcar mes como cobrado</button></div>
+        <div class="month"><label style="margin:0">Mes del viaje</label><input type="month" id="dMonth"><button class="ghost small" id="dCsv">Descargar CSV</button></div>
         <div class="totals" id="dTotals"></div>
         <div class="wrap"><table>
           <thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Trayecto</th><th>Importe</th><th>Estado</th></tr></thead>
@@ -40,6 +40,7 @@ table{min-width:720px}
       <div><label>Email (recibe la confirmación de cada reserva)</label><input name="email" type="email" maxlength="120"></div>
       <div><label>Teléfono</label><input name="phone" maxlength="30"></div>
       <div><label>Notas internas (condiciones, facturación…)</label><textarea name="notes" rows="3" maxlength="1000"></textarea></div>
+      <div><label>Máximo de reservas al día</label><input name="daily_limit" type="number" min="1" max="500" value="25"><small>Protección por si el enlace se filtra. Súbelo para hoteles grandes.</small></div>
       <button type="submit">Crear y obtener enlace</button>
     </form>
   </div>
@@ -57,8 +58,8 @@ async function load() {
     <td><div class="link">${esc(c.url)}</div><div class="row">
       <button class="small" data-copy="${esc(c.url)}">Copiar enlace</button>
       <a class="btn ghost small" href="${esc(c.url)}" target="_blank">Abrir ↗</a>
-      <a class="btn ghost small" target="_blank" href="https://wa.me/?text=${encodeURIComponent('Este es vuestro enlace para reservar traslados con Alayan Driver (sin pago al reservar, se factura a final de mes): ' + c.url)}">WhatsApp</a></div></td>
-    <td>${c.pending ? `<b>${eur(c.pending_eur)}</b><br><small>${c.pending} reserva(s)</small>` : '<small>—</small>'}<br><small>${c.bookings} en total</small></td>
+      <a class="btn ghost small" target="_blank" href="https://wa.me/?text=${encodeURIComponent('Este es vuestro enlace para registrar los traslados de vuestros clientes con Alayan Driver (el pago lo gestionamos nosotros con el cliente): ' + c.url)}">WhatsApp</a></div></td>
+    <td><b>${c.this_month}</b> <small>este mes</small><br><small>${c.bookings} en total · máx. ${c.daily_limit}/día</small></td>
     <td><input type="checkbox" data-active="${c.id}" ${c.active ? 'checked' : ''} title="Desactivada: su enlace deja de funcionar"></td>
     <td><div class="row" style="margin:0;flex-wrap:wrap">
       <button class="ghost small" data-month="${c.id}">Resumen del mes</button>
@@ -84,7 +85,7 @@ $('rows').addEventListener('click', async e => {
   if (d.newlink && confirm('¿Crear un enlace nuevo? El actual dejará de funcionar (por ejemplo, si se ha compartido con quien no debía).')) patch(d.newlink, { newLink: true }, 'Enlace nuevo creado');
   if (d.edit) {
     const c = companies.find(x => String(x.id) === d.edit);
-    const fields = [['name', 'Nombre'], ['contact', 'Contacto'], ['email', 'Email'], ['phone', 'Teléfono'], ['notes', 'Notas']];
+    const fields = [['name', 'Nombre'], ['contact', 'Contacto'], ['email', 'Email'], ['phone', 'Teléfono'], ['notes', 'Notas'], ['daily_limit', 'Máximo de reservas al día (protección si el enlace se filtra)']];
     const body = {};
     for (const [k, label] of fields) {
       const v = prompt(label + ':', c[k] || '');
@@ -108,11 +109,11 @@ async function openMonth(c) {
 }
 async function loadMonth() {
   monthData = await api(`/api/panel/companies/${current.id}/month?month=${$('dMonth').value}`);
-  const STATUS = { a_cuenta: 'a cuenta', pagado: 'cobrado', sin_pago: 'sin pago', enlace_enviado: 'enlace enviado', fallido: 'fallido' };
+  const STATUS = { pagado: 'cobrado', sin_pago: 'pendiente de cobro', enlace_enviado: 'enlace de pago enviado', fallido: 'pago fallido' };
   $('dTotals').innerHTML = [
     `<span class="tag">${monthData.bookings.length} reservas</span>`,
-    `<span class="tag">Total ${eur(monthData.total)}</span>`,
-    `<span class="tag pendiente">Pendiente de cobro ${eur(monthData.pending)}</span>`,
+    `<span class="tag">Valor de los viajes ${eur(monthData.total)}</span>`,
+    `<span class="tag pendiente">Sin cobrar a los clientes ${eur(monthData.unpaid)}</span>`,
     monthData.withoutPrice ? `<span class="tag fallido">${monthData.withoutPrice} sin precio (ponlo en Reservas)</span>` : ''
   ].join('');
   $('dRows').innerHTML = monthData.bookings.map(r => `<tr class="${r.status === 'cancelada' ? 'past' : ''}">
@@ -123,13 +124,6 @@ async function loadMonth() {
 }
 $('dMonth').onchange = loadMonth;
 $('dClose').onclick = () => { $('detail').hidden = true; };
-$('dSettle').onclick = async () => {
-  if (!monthData?.pending) return toast('No hay nada pendiente de cobro este mes.');
-  if (!confirm(`¿Marcar como cobradas las reservas a cuenta de ${current.name} de ${$('dMonth').value} (${eur(monthData.pending)})?`)) return;
-  try { const r = await api(`/api/panel/companies/${current.id}/settle`, { method: 'POST', body: { month: $('dMonth').value } }); toast(`${r.settled} reserva(s) marcadas como cobradas`); }
-  catch (e) { toast(e.message, 'error'); }
-  await loadMonth(); await load();
-};
 $('dCsv').onclick = () => {
   if (!monthData?.bookings.length) return toast('Sin reservas este mes.');
   const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;

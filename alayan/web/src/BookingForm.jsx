@@ -253,8 +253,8 @@ export default function BookingForm({ t, p, lang, waBase, owner, preset, account
         </div>
       </div>
 
-      {/* Total */}
-      <div className="mt-6 rounded-[20px] bg-[#0A0A0A] text-white px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
+      {/* Total (no se muestra a los hoteles: el precio lo gestiona Alayan con el cliente) */}
+      {!account && <div className="mt-6 rounded-[20px] bg-[#0A0A0A] text-white px-6 py-5 flex items-center justify-between gap-4 flex-wrap">
         <div>
           <div className="text-[10px] tracking-[0.25em] text-white/40">{b.total}</div>
           {priced ? (
@@ -268,13 +268,13 @@ export default function BookingForm({ t, p, lang, waBase, owner, preset, account
             <>
               <div className="text-white/80">{quote.tariff === 'T2' ? b.tariff2 : b.tariff1}</div>
               {quote.extrasAmount > 0 && <div>{fill(b.extrasIncluded, { amount: money(quote.extrasAmount, lang) })}</div>}
-              <div>{account ? fill(t.account.billing, { name: account.name }) : b.totalNote}</div>
+              <div>{b.totalNote}</div>
             </>
           ) : (
             <div>{f.mode === 'route' && !dest ? b.noPlace : b.quoteNote}</div>
           )}
         </div>
-      </div>
+      </div>}
 
       {/* Aceptación de privacidad y condiciones + información básica (primera capa, art. 13 RGPD) */}
       <label className="mt-6 flex gap-3 items-start text-[12px] leading-relaxed text-black/70 cursor-pointer">
@@ -296,7 +296,7 @@ export default function BookingForm({ t, p, lang, waBase, owner, preset, account
           disabled={sending}
           className="h-12 px-4 rounded-full bg-[#C5A46A] text-black text-[11px] md:text-[12px] tracking-[0.16em] font-semibold flex items-center justify-center text-center leading-tight hover:brightness-110 transition disabled:opacity-60"
         >
-          {sending ? '…' : (account ? fill(t.account.submit, { name: account.name }) : priced ? fill(b.pay, { amount: money(quote.amount, lang) }) : b.request).toUpperCase()}
+          {sending ? '…' : (account ? t.account.submit : priced ? fill(b.pay, { amount: money(quote.amount, lang) }) : b.request).toUpperCase()}
         </button>
         <a
           href={`${waBase}?text=${encodeURIComponent(fill(b.whatsappMessage, { ...f, origin: route[0], destination: route[1] }))}`}

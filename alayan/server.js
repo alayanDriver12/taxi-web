@@ -70,6 +70,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS companies (
   active INTEGER NOT NULL DEFAULT 1,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )`);
+if (!db.prepare('PRAGMA table_info(companies)').all().some(c => c.name === 'daily_limit'))
+  db.exec('ALTER TABLE companies ADD COLUMN daily_limit INTEGER NOT NULL DEFAULT 25'); // tope de reservas al día (enlace filtrado)
 if (!bookingCols.includes('tariff')) db.exec('ALTER TABLE bookings ADD COLUMN tariff TEXT'); // T1 | T2 si el precio es automático
 
 // Conservación (política de privacidad, apartado 4): las solicitudes que no llegaron a contratarse
@@ -209,7 +211,7 @@ app.post('/api/bookings', limiter, async (req, res) => {
   notifier.bookingReceived(db.prepare('SELECT * FROM bookings WHERE id=?').get(id)).catch(e => console.error(e));
 });
 
-// ---------- Hoteles y empresas: reservan con su enlace privado (/empresa/<token>) y pagan después ----------
+// ---------- Hoteles y empresas: registran reservas de sus clientes con su enlace privado (/empresa/<token>) ----------
 const companyByToken = db.prepare('SELECT * FROM companies WHERE token=? AND active=1');
 const companyFrom = (req, res) => {
   const c = /^[A-Za-z0-9_-]{16,64}$/.test(req.params.token) ? companyByToken.get(req.params.token) : null;
@@ -223,11 +225,15 @@ app.get('/api/empresa/:token', limiter, (req, res) => {
 app.post('/api/empresa/:token/bookings', limiter, async (req, res) => {
   const c = companyFrom(req, res);
   if (!c) return;
+  // Tope diario por empresa: si un enlace se filtra, el abuso queda limitado (se ajusta en /admin/empresas)
+  const today = db.prepare("SELECT COUNT(*) AS n FROM bookings WHERE company_id=? AND created_at >= datetime('now','-1 day')").get(c.id).n;
+  if (today >= c.daily_limit) return res.status(429).json({ error: 'Se ha alcanzado el máximo de reservas por hoy desde este enlace. Escríbenos por WhatsApp y lo gestionamos.' });
   const { d, error } = buildBooking(req.body || {}, { emailRequired: false });
   if (error) return res.status(400).json({ error });
-  // A cuenta de la empresa: sin enlace de pago; se cobra después (resumen mensual en /admin/empresas)
-  const id = insertBooking.run({ ...d, company: c.name, company_id: c.id, source: 'empresa', payment_status: 'a_cuenta' }).lastInsertRowid;
-  res.status(201).json({ id, amount: d.amount_eur, tariff: d.tariff });
+  // Paga el huésped, no el hotel: la reserva sigue el flujo normal (sin pago todavía). Joaquín le cobra en el coche
+  // o le envía el enlace de pago desde el panel. Al hotel no se le muestra el precio.
+  const id = insertBooking.run({ ...d, company: c.name, company_id: c.id, source: 'empresa', payment_status: 'sin_pago' }).lastInsertRowid;
+  res.status(201).json({ id });
   notifier.companyBooking(db.prepare('SELECT * FROM bookings WHERE id=?').get(id), c).catch(e => console.error(e));
 });
 
@@ -342,14 +348,14 @@ const adminOnly = auth.requireApi('admin');
 const newCompanyToken = () => crypto.randomBytes(16).toString('base64url'); // 22 caracteres, no adivinable
 const companyFields = b => ({
   name: clean(b.name, 120), contact: clean(b.contact, 120), email: clean(b.email, 120),
-  phone: clean(b.phone, 30), notes: clean(b.notes, 1000)
+  phone: clean(b.phone, 30), notes: clean(b.notes, 1000),
+  daily_limit: Math.min(Math.max(parseInt(b.daily_limit) || 25, 1), 500)
 });
 const companyView = c => ({ ...c, active: !!c.active, url: `${BASE_URL}/empresa/${c.token}` });
 panel.get('/companies', adminOnly, (req, res) => {
   const rows = db.prepare(`SELECT c.*,
       (SELECT COUNT(*) FROM bookings b WHERE b.company_id=c.id) AS bookings,
-      (SELECT COUNT(*) FROM bookings b WHERE b.company_id=c.id AND b.payment_status='a_cuenta' AND b.status!='cancelada') AS pending,
-      (SELECT COALESCE(SUM(amount_eur),0) FROM bookings b WHERE b.company_id=c.id AND b.payment_status='a_cuenta' AND b.status!='cancelada') AS pending_eur
+      (SELECT COUNT(*) FROM bookings b WHERE b.company_id=c.id AND substr(b.created_at,1,7)=strftime('%Y-%m','now')) AS this_month
     FROM companies c ORDER BY c.active DESC, c.name`).all();
   res.json(rows.map(companyView));
 });
@@ -357,7 +363,7 @@ panel.post('/companies', adminOnly, (req, res) => {
   const f = companyFields(req.body || {});
   if (!f.name) return res.status(400).json({ error: 'Pon el nombre del hotel o empresa.' });
   if (f.email && !/^\S+@\S+\.\S+$/.test(f.email)) return res.status(400).json({ error: 'Email no válido.' });
-  const id = db.prepare('INSERT INTO companies (name,contact,email,phone,notes,token) VALUES (@name,@contact,@email,@phone,@notes,@token)')
+  const id = db.prepare('INSERT INTO companies (name,contact,email,phone,notes,daily_limit,token) VALUES (@name,@contact,@email,@phone,@notes,@daily_limit,@token)')
     .run({ ...f, token: newCompanyToken() }).lastInsertRowid;
   res.status(201).json(companyView(db.prepare('SELECT * FROM companies WHERE id=?').get(id)));
 });
@@ -370,7 +376,7 @@ panel.patch('/companies/:id', adminOnly, (req, res) => {
   if (f.email && !/^\S+@\S+\.\S+$/.test(f.email)) return res.status(400).json({ error: 'Email no válido.' });
   if (typeof b.active === 'boolean') f.active = b.active ? 1 : 0;
   if (b.newLink === true) f.token = newCompanyToken(); // el enlace anterior deja de funcionar
-  db.prepare('UPDATE companies SET name=@name,contact=@contact,email=@email,phone=@phone,notes=@notes,active=@active,token=@token WHERE id=@id').run(f);
+  db.prepare('UPDATE companies SET name=@name,contact=@contact,email=@email,phone=@phone,notes=@notes,daily_limit=@daily_limit,active=@active,token=@token WHERE id=@id').run(f);
   res.json(companyView(db.prepare('SELECT * FROM companies WHERE id=?').get(cur.id)));
 });
 // Reservas de una empresa en un mes (por fecha del viaje) para cobrar o facturar
@@ -382,18 +388,9 @@ panel.get('/companies/:id/month', adminOnly, (req, res) => {
   res.json({
     month, bookings: rows,
     total: active.reduce((s, r) => s + (r.amount_eur || 0), 0),
-    pending: active.filter(r => r.payment_status === 'a_cuenta').reduce((s, r) => s + (r.amount_eur || 0), 0),
+    unpaid: active.filter(r => r.payment_status !== 'pagado').reduce((s, r) => s + (r.amount_eur || 0), 0),
     withoutPrice: active.filter(r => !(r.amount_eur > 0)).length
   });
-});
-// Marca como cobradas las reservas a cuenta de ese mes (no las canceladas ni las que no tienen precio)
-panel.post('/companies/:id/settle', adminOnly, (req, res) => {
-  const month = /^\d{4}-\d{2}$/.test(req.body?.month) ? req.body.month : null;
-  if (!month) return res.status(400).json({ error: 'Mes no válido.' });
-  const r = db.prepare(`UPDATE bookings SET payment_status='pagado', paid_at=datetime('now')
-    WHERE company_id=? AND substr(date,1,7)=? AND payment_status='a_cuenta' AND status!='cancelada' AND amount_eur>0`)
-    .run(Number(req.params.id), month);
-  res.json({ settled: r.changes });
 });
 
 panel.get('/bookings', (req, res) => {
@@ -461,8 +458,8 @@ panel.patch('/bookings/:id', (req, res) => {
   }
   if (['pendiente','pagada','confirmada','cancelada'].includes(status)) db.prepare('UPDATE bookings SET status=? WHERE id=?').run(status, id);
   if (notes !== undefined) db.prepare('UPDATE bookings SET notes=? WHERE id=?').run(clean(notes, 1000), id);
-  // Reserva de empresa (a cuenta) cobrada a mano: transferencia, factura pagada…
-  if (req.body?.settled === true && cur.payment_status === 'a_cuenta') db.prepare("UPDATE bookings SET payment_status='pagado', paid_at=datetime('now') WHERE id=?").run(id);
+  // Cobrada en mano (efectivo o datáfono en el coche, transferencia…): se marca pagada sin SumUp
+  if (req.body?.settled === true && cur.payment_status !== 'pagado' && cur.amount_eur > 0) db.prepare("UPDATE bookings SET payment_status='pagado', paid_at=datetime('now') WHERE id=?").run(id);
   res.json({ ok: true });
 });
 
@@ -728,7 +725,7 @@ app.get(['/', '/index.html', '/en', '/traslados', '/traslados/:slug', '/en/trans
 // robots.txt y sitemap.xml (con las versiones ES/EN de cada página)
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send(INDEXABLE
-    ? ['User-agent: *', 'Allow: /', 'Disallow: /pago/', 'Disallow: /api/', 'Disallow: /admin', 'Disallow: /reservas', 'Disallow: /login', 'Disallow: /guia', 'Disallow: /guide', '', `Sitemap: ${BASE_URL}/sitemap.xml`, ''].join('\n')
+    ? ['User-agent: *', 'Allow: /', 'Disallow: /pago/', 'Disallow: /api/', 'Disallow: /admin', 'Disallow: /reservas', 'Disallow: /login', 'Disallow: /empresa/', 'Disallow: /guia', 'Disallow: /guide', '', `Sitemap: ${BASE_URL}/sitemap.xml`, ''].join('\n')
     : 'User-agent: *\nDisallow: /\n');
 });
 app.get('/sitemap.xml', async (req, res) => {

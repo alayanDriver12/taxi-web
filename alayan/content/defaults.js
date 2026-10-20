@@ -145,12 +145,11 @@ module.exports = {
     account: {
       kicker: 'RESERVAS DE EMPRESA',
       title: 'Reservas para {name}',
-      subtitle: 'Reserva aquí los traslados de vuestros clientes. No hay que pagar ahora: se incluyen en el resumen de fin de mes.',
+      subtitle: 'Registra aquí los traslados de vuestros clientes. El precio y el pago los gestionamos directamente con el cliente.',
       guest: 'Nombre del cliente o huésped *',
       email: 'Email del cliente (opcional)',
-      submit: 'Reservar a cuenta de {name}',
-      billing: 'A cuenta de {name} · se cobra con el resumen mensual',
-      sent: '¡Reserva #{id} registrada! Os hemos enviado la confirmación por email.',
+      submit: 'Registrar reserva',
+      sent: '¡Reserva #{id} registrada! Os hemos enviado la confirmación por email y nos encargamos del resto con el cliente.',
       another: 'Hacer otra reserva',
       invalid: 'Este enlace no es válido o está desactivado. Escríbenos y te ayudamos.',
       loading: 'Cargando…'
@@ -473,12 +472,11 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
     account: {
       kicker: 'BUSINESS BOOKINGS',
       title: 'Bookings for {name}',
-      subtitle: 'Book your guests’ transfers here. Nothing to pay now: they are included in the end-of-month statement.',
+      subtitle: 'Register your guests’ transfers here. We handle the price and payment directly with the guest.',
       guest: 'Guest name *',
       email: 'Guest email (optional)',
-      submit: 'Book on {name} account',
-      billing: 'On {name} account · charged with the monthly statement',
-      sent: 'Booking #{id} registered! We have emailed you the confirmation.',
+      submit: 'Register booking',
+      sent: 'Booking #{id} registered! We have emailed you the confirmation and will handle the rest with the guest.',
       another: 'Make another booking',
       invalid: 'This link is not valid or has been disabled. Message us and we will help you.',
       loading: 'Loading…'

@@ -133,21 +133,24 @@ try {
   ok((await call('/api/pay/' + tokenOf(bk4.data.payUrl))).data.state === 'cancelled', 'reserva cancelada: la página lo dice');
   ok((await call(`/api/pay/${tokenOf(bk4.data.payUrl)}/checkout`, { body: { accept: true } })).status >= 400, 'reserva cancelada: no deja pagar');
 
-  section('Empresas (hoteles) con enlace privado y pago posterior');
-  const co = await call('/api/panel/companies', { as: 'admin', body: { name: 'Hotel Prueba', email: 'hotel@example.com' } });
+  section('Empresas (hoteles): enlace privado, sin precios, paga el cliente');
+  const co = await call('/api/panel/companies', { as: 'admin', body: { name: 'Hotel Prueba', email: 'hotel@example.com', daily_limit: 2 } });
   ok(co.status === 201 && /[/]empresa[/][A-Za-z0-9_-]{16,}$/.test(co.data.url), 'el admin crea una empresa y obtiene su enlace');
   const tok = co.data.url.split('/empresa/')[1];
   ok((await call('/empresa/' + tok)).status === 200, 'la página de la empresa abre sin registrarse');
   ok((await call('/api/empresa/' + tok)).data.name === 'Hotel Prueba', 'la página sabe de qué empresa es');
   ok((await call('/api/empresa/tokenfalso1234567890')).status === 404, 'un enlace inventado no sirve');
-  const cb = await call('/api/empresa/' + tok + '/bookings', { body: { mode: 'airport', direction: 'toCity', address: 'Hotel', pax: 2, date: wed, time: '12:00', name: 'Huésped Uno', phone: '611000111', privacy: true } });
-  ok(cb.status === 201 && cb.data.amount === 35 && !cb.data.payUrl, 'reserva a cuenta: con precio, sin enlace de pago y sin email del huésped');
+  const hotelBooking = n => call('/api/empresa/' + tok + '/bookings', { body: { mode: 'airport', direction: 'toCity', address: 'Hotel', pax: 2, date: wed, time: '12:0' + n, name: 'Huésped ' + n, phone: '61100011' + n, privacy: true } });
+  const cb = await hotelBooking(1);
+  ok(cb.status === 201 && cb.data.amount === undefined && !cb.data.payUrl, 'el hotel registra la reserva sin ver precio ni pagar (y sin email del huésped)');
   const cbB = await bookingById(cb.data.id);
-  ok(cbB.payment_status === 'a_cuenta' && cbB.company_name === 'Hotel Prueba' && cbB.emails.some(e => e.kind === 'company'), 'queda a cuenta del hotel y se le avisa por email');
+  ok(cbB.payment_status === 'sin_pago' && cbB.amount_eur === 35 && cbB.company_name === 'Hotel Prueba', 'la reserva queda con el precio de tarifa para cobrar al cliente');
+  ok(cbB.emails.some(e => e.kind === 'company'), 'se envía la confirmación al hotel');
+  ok((await hotelBooking(2)).status === 201 && (await hotelBooking(3)).status === 429, 'tope diario por empresa (protección si el enlace se filtra)');
+  await call('/api/panel/bookings/' + cb.data.id, { method: 'PATCH', as: 'admin', body: { settled: true } });
+  ok((await bookingById(cb.data.id)).payment_status === 'pagado', 'Joaquín la marca como cobrada en mano');
   const mo = await call('/api/panel/companies/' + co.data.id + '/month?month=' + wed.slice(0, 7), { as: 'admin' });
-  ok(mo.data.bookings.length === 1 && mo.data.pending === 35, 'resumen mensual con el importe pendiente');
-  ok((await call('/api/panel/companies/' + co.data.id + '/settle', { as: 'admin', body: { month: wed.slice(0, 7) } })).data.settled === 1, 'se marca el mes como cobrado');
-  ok((await bookingById(cb.data.id)).payment_status === 'pagado', 'la reserva pasa a cobrada');
+  ok(mo.data.bookings.length === 2 && mo.data.unpaid === 35, 'resumen mensual de la empresa (viajes y lo que falta cobrar a los clientes)');
   await call('/api/panel/companies/' + co.data.id, { method: 'PATCH', as: 'admin', body: { active: false } });
   ok((await call('/api/empresa/' + tok)).status === 404, 'empresa desactivada: su enlace deja de funcionar');
 

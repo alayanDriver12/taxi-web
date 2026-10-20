@@ -126,7 +126,7 @@ function extrasText(r) {
   return Object.keys(EXTRA_LABELS).filter(k => e[k]).map(k => (k === 'other' && e.otherText ? 'Otros: ' + e.otherText : EXTRA_LABELS[k])).join(', ');
 }
 const STATUSES = ['pendiente', 'pagada', 'confirmada', 'cancelada'];
-const PAY_LABELS = { a_cuenta: 'a cuenta (empresa)', sin_pago: 'sin presupuesto', enlace_enviado: 'presupuesto enviado', pagado: 'pagado', fallido: 'pago fallido' };
+const PAY_LABELS = { sin_pago: 'sin presupuesto', enlace_enviado: 'presupuesto enviado', pagado: 'pagado', fallido: 'pago fallido' };
 const ATTEMPT_LABELS = { PENDING: 'en curso', PAID: 'pagado', FAILED: 'rechazado', EXPIRED: 'caducado' };
 const $ = id => document.getElementById(id);
 let me, all = [];
@@ -155,12 +155,6 @@ function cobro(r) {
     return `<span class="tag pagado">pagado</span>
       <div class="paid"><b>${eur(paid?.amount_eur ?? r.amount_eur)}</b><br><small>${utc(r.paid_at)}${paid?.transaction_code ? ' · ref. ' + esc(paid.transaction_code) : ''}</small></div>${notifyBtn}${attempts}${emails}`;
   }
-  if (r.payment_status === 'a_cuenta') {
-    return `<span class="tag a_cuenta pendiente">a cuenta · ${esc(r.company_name || 'empresa')}</span>
-      <div class="price"><input id="a${r.id}" type="text" inputmode="decimal" autocomplete="off" placeholder="Precio €" value="${r.amount_eur != null ? r.amount_eur.toFixed(2).replace('.', ',') : ''}">
-        <button class="small" data-price="${r.id}">Guardar precio</button></div>
-      <div class="row"><button class="ghost small" data-settle="${r.id}">Marcar cobrada</button></div>${notifyBtn}${emails}`;
-  }
   const canQuote = r.status !== 'cancelada' && r.date >= today();
   return `<span class="tag ${r.payment_status}">${PAY_LABELS[r.payment_status] || r.payment_status}</span>
     <div class="price"><input id="a${r.id}" type="text" inputmode="decimal" autocomplete="off" placeholder="Precio €" value="${r.amount_eur != null ? r.amount_eur.toFixed(2).replace('.', ',') : ''}" ${canQuote ? '' : 'disabled'}>
@@ -169,6 +163,7 @@ function cobro(r) {
       <a class="btn small" href="${esc(r.waQuote)}" target="_blank">Enviar por WhatsApp</a>
       <button class="ghost small" data-copy="${esc(r.payUrl)}">Copiar enlace</button></div>` : ''}
     ${pending ? `<div class="row"><button class="ghost small" data-sync="${r.id}">Comprobar pago</button></div>` : ''}
+    ${r.amount_eur > 0 && r.status !== 'cancelada' ? `<div class="row"><button class="ghost small" data-settle="${r.id}" title="Efectivo o datáfono en el coche, transferencia…">Cobrado en mano</button></div>` : ''}
     ${notifyBtn}${attempts}${emails}`;
 }
 
@@ -280,12 +275,7 @@ $('rows').addEventListener('click', async e => {
       await load();
     } catch (err) { toast(err.message, 'error'); t.disabled = false; }
   }
-  if (d.price) {
-    const amount = $('a' + d.price).value;
-    if (!(parseFloat(amount) > 0)) return toast('Pon el precio.', 'error');
-    await update(d.price, { amount });
-  }
-  if (d.settle && confirm(`¿Marcar la reserva #${d.settle} como cobrada?`)) await update(d.settle, { settled: true });
+  if (d.settle && confirm(`¿Marcar la reserva #${d.settle} como cobrada en mano (efectivo, datáfono, transferencia)?`)) await update(d.settle, { settled: true });
   if (d.copy) {
     await navigator.clipboard?.writeText(d.copy).then(() => toast('Enlace copiado'), () => toast('No se pudo copiar', 'error'));
   }
