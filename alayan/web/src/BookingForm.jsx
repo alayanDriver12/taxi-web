@@ -18,9 +18,20 @@ const EMPTY = {
 const input = 'mt-1.5 w-full h-11 px-4 rounded-full bg-white border border-black/10 text-[14px] outline-none focus:border-[#C5A46A] focus:ring-2 focus:ring-[#C5A46A]/20';
 const label = 'text-[11px] tracking-[0.18em] text-black/60';
 
+// Campos que rellena una preselección (botones «Reservar» de las tarifas o página de un traslado)
+function presetFields(preset, p) {
+  const dest = preset.destinationId && p.destinations.find(d => d.id === preset.destinationId);
+  return {
+    mode: preset.mode,
+    direction: preset.mode === 'route' ? 'fromSevilla' : 'toCity',
+    ...(preset.pax ? { pax: preset.pax } : {}),
+    ...(dest ? { destinationId: dest.id, placeQuery: dest.name } : {})
+  };
+}
+
 export default function BookingForm({ t, p, lang, waBase, owner, preset }) {
   const b = t.booking;
-  const [f, setF] = useState(EMPTY);
+  const [f, setF] = useState(() => (preset ? { ...EMPTY, ...presetFields(preset, p) } : EMPTY));
   const [accepted, setAccepted] = useState(false);
   const [sending, setSending] = useState(false);
   const [sentId, setSentId] = useState(null);
@@ -31,13 +42,7 @@ export default function BookingForm({ t, p, lang, waBase, owner, preset }) {
   // Botones «Reservar» de las tarifas: rellenan el formulario
   useEffect(() => {
     if (!preset) return;
-    const dest = preset.destinationId && p.destinations.find(d => d.id === preset.destinationId);
-    set({
-      mode: preset.mode,
-      direction: preset.mode === 'route' ? 'fromSevilla' : 'toCity',
-      ...(preset.pax ? { pax: preset.pax } : {}),
-      ...(dest ? { destinationId: dest.id, placeQuery: dest.name } : {})
-    });
+    set(presetFields(preset, p));
     setSentId(null);
     setError('');
   }, [preset]);

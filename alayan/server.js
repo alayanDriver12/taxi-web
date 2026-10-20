@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { pathToFileURL } = require('node:url');
 const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -525,35 +526,125 @@ app.get('/admin/flota', auth.requirePage('admin'), panelPage('flota.html'));
 app.use('/panel', express.static(path.join(PANEL_DIR, 'assets'), { maxAge: '1h' }));
 
 // ---------- Web pública ----------
-// El HTML se sirve con el contenido ya incrustado: sin parpadeo y bueno para SEO
+// Solo se deja indexar en el dominio definitivo: staging y las URL *.up.railway.app no salen en Google
+// (contenido duplicado). INDEXABLE=true|false lo fuerza.
+const SITE_HOST = new URL(BASE_URL).hostname;
+const INDEXABLE = process.env.INDEXABLE ? process.env.INDEXABLE === 'true'
+  : !(SITE_HOST.endsWith('.up.railway.app') || SITE_HOST === 'localhost' || SITE_HOST === '127.0.0.1');
+if (!INDEXABLE) app.use((req, res, next) => { res.set('X-Robots-Tag', 'noindex, nofollow'); next(); });
+
+// Renderizado en servidor (SSR): dist-ssr/entry-server.mjs, generado por `npm run build`.
+// Si no está (p. ej. con `npm run dev:web`), la web se pinta en el navegador como antes.
+const SSR_FILE = path.join(__dirname, 'dist-ssr', 'entry-server.mjs');
+let ssr = null, ssrMtime = 0;
+async function loadSsr() {
+  try {
+    const mtime = fs.statSync(SSR_FILE).mtimeMs;
+    // En local se recarga tras cada `npm run build`; en producción se carga una vez
+    if (!ssr || (process.env.NODE_ENV !== 'production' && mtime !== ssrMtime)) {
+      ssr = await import(pathToFileURL(SSR_FILE).href + '?v=' + mtime);
+      ssrMtime = mtime;
+    }
+  } catch (e) { if (e.code !== 'ENOENT') console.error('SSR:', e.message); ssr = null; }
+  return ssr;
+}
+loadSsr();
+
+// <head> de cada página: título, descripción, canónica, idiomas, Open Graph y datos estructurados
+function headTags(h) {
+  const json = o => JSON.stringify(o).replace(/</g, String.fromCharCode(92) + 'u003c');
+  return [
+    h.canonical && `<link rel="canonical" href="${esc(h.canonical)}">`,
+    ...h.alternates.map(a => `<link rel="alternate" hreflang="${a.lang}" href="${esc(a.href)}">`),
+    h.xDefault && `<link rel="alternate" hreflang="x-default" href="${esc(h.xDefault)}">`,
+    (h.noindex || !INDEXABLE) && '<meta name="robots" content="noindex">',
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="Alayan Driver">`,
+    `<meta property="og:title" content="${esc(h.title)}">`,
+    `<meta property="og:description" content="${esc(h.description)}">`,
+    h.canonical && `<meta property="og:url" content="${esc(h.canonical)}">`,
+    `<meta property="og:image" content="${esc(h.image)}">`,
+    `<meta property="og:locale" content="${h.locale}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    ...h.jsonld.map(o => `<script type="application/ld+json">${json(o)}</script>`)
+  ].filter(Boolean).join('\n  ');
+}
+
+// El HTML se sirve con el contenido ya incrustado (y, con SSR, ya pintado): sin parpadeo y bueno para SEO
 let indexTemplate = null;
-function renderIndex(pageTitle) {
+async function renderPage(req, { pageTitle, ssr: useSsr = true } = {}) {
   // En producción se lee una vez; en local se relee para que un `npm run build` se vea sin reiniciar
   if (!indexTemplate || process.env.NODE_ENV !== 'production') indexTemplate = fs.readFileSync(path.join(DIST_DIR, 'index.html'), 'utf8');
   const c = siteData();
   const json = JSON.stringify(c).replace(/</g, String.fromCharCode(92) + 'u003c'); // "<" escapado: un texto no puede cerrar el <script>
-  const title = pageTitle ? `${pageTitle} · ${c.ES.brand.name}` : c.seo.title;
-  return indexTemplate
+  let title = pageTitle ? `${pageTitle} · ${c.ES.brand.name}` : c.seo.title, description = c.seo.description;
+  let body = '', head = '', status = 200, lang = 'es';
+  const mod = useSsr && await loadSsr();
+  if (mod) {
+    try {
+      const r = mod.render(req.originalUrl, c, BASE_URL);
+      body = r.html;
+      status = r.status;
+      if (r.head) { title = r.head.title; description = r.head.description; head = headTags(r.head); lang = r.lang.toLowerCase(); }
+    } catch (e) { console.error('SSR:', e.message); body = ''; }
+  }
+  if (!head && !INDEXABLE) head = '<meta name="robots" content="noindex">';
+  const html = indexTemplate
+    .replace('<html lang="es">', `<html lang="${lang}">`)
     .replace(/<title>[^<]*<\/title>/, `<title>${esc(title)}</title>`)
-    .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${esc(c.seo.description)}">`)
+    .replace(/<meta name="description" content="[^"]*">/, `<meta name="description" content="${esc(description)}">${head ? '\n  ' + head : ''}`)
+    .replace('<div id="root"></div>', `<div id="root">${body}</div>`)
     .replace('<!--content-->', `<script>window.__ALAYAN_CONTENT__=${json}</script>`);
+  return { html, status };
 }
 
 // Páginas legales: las pinta la misma app React según la ruta (web/src/Legal.jsx)
 const LEGAL_PAGES = { '/aviso-legal': 'notice', '/privacidad': 'privacy', '/cookies': 'cookies', '/condiciones': 'terms' };
 
-function sendIndex(res, title) {
-  try { res.type('html').send(renderIndex(title)); }
-  catch (e) {
+async function sendIndex(req, res, opts) {
+  try {
+    const { html, status } = await renderPage(req, opts);
+    res.status(status).type('html').send(html);
+  } catch (e) {
     if (e.code !== 'ENOENT') throw e;
     res.status(503).send('Falta compilar la web: ejecuta <code>npm run build</code>.');
   }
 }
 
-app.get(['/', '/index.html', ...Object.keys(LEGAL_PAGES)], (req, res) => {
+// Las direcciones antiguas con ?lang=en pasan a /en (una sola URL por página para Google)
+app.get('/', (req, res, next) => (req.query.lang === 'en' ? res.redirect(301, '/en') : next()));
+
+// Portada, páginas de traslados (una por ruta de la tabla de tarifas) y páginas legales
+app.get(['/', '/index.html', '/en', '/traslados', '/traslados/:slug', '/en/transfers', '/en/transfers/:slug', ...Object.keys(LEGAL_PAGES)], (req, res) => {
   const legalKey = LEGAL_PAGES[req.path.replace(/[/]+$/, '')];
   res.set('Cache-Control', 'no-cache');
-  sendIndex(res, legalKey && content.get().ES.footer.legal[legalKey]);
+  sendIndex(req, res, { pageTitle: legalKey && content.get().ES.footer.legal[legalKey] });
+});
+
+// robots.txt y sitemap.xml (con las versiones ES/EN de cada página)
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(INDEXABLE
+    ? ['User-agent: *', 'Allow: /', 'Disallow: /pago/', 'Disallow: /api/', 'Disallow: /admin', 'Disallow: /reservas', 'Disallow: /login', 'Disallow: /guia', 'Disallow: /guide', '', `Sitemap: ${BASE_URL}/sitemap.xml`, ''].join('\n')
+    : 'User-agent: *\nDisallow: /\n');
+});
+app.get('/sitemap.xml', async (req, res) => {
+  const mod = await loadSsr();
+  if (!mod) return res.sendStatus(503);
+  const today = new Date().toISOString().slice(0, 10);
+  const urls = mod.sitemapPages(pricing.publicView()).flatMap(pg => ['es', 'en'].map(l => `  <url>
+    <loc>${esc(BASE_URL + pg[l])}</loc>
+    <lastmod>${today}</lastmod>
+    <priority>${pg.priority}</priority>
+    <xhtml:link rel="alternate" hreflang="es" href="${esc(BASE_URL + pg.es)}"/>
+    <xhtml:link rel="alternate" hreflang="en" href="${esc(BASE_URL + pg.en)}"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="${esc(BASE_URL + pg.es)}"/>
+  </url>`));
+  const legal = Object.keys(LEGAL_PAGES).map(p => `  <url>\n    <loc>${esc(BASE_URL + p)}</loc>\n    <priority>0.2</priority>\n  </url>`);
+  res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+${[...urls, ...legal].join('\n')}
+</urlset>
+`);
 });
 
 // Guía de Sevilla para clientes (web/src/guia/): página independiente, se comparte por enlace.
@@ -574,7 +665,7 @@ app.get(['/guia', '/guide'], (req, res) => {
 // Página de pago (la pinta React: web/src/Pay.jsx). Privada: que no la indexe nadie.
 app.get('/pago/:token', (req, res) => {
   res.set({ 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' });
-  sendIndex(res, content.get().ES.payment.title);
+  sendIndex(req, res, { pageTitle: content.get().ES.payment.title, ssr: false });
 });
 
 app.use('/uploads', express.static(UPLOADS_DIR, { maxAge: '30d' }));

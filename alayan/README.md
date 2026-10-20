@@ -32,6 +32,12 @@ dist/                web compilada (npm run build, no se sube al repo)
 `ADMIN_USER` / `ADMIN_PASS` solo se usan **la primera vez** (con la tabla de usuarios vacía) para crear el
 administrador inicial. Después se gestiona todo desde `/admin/usuarios`.
 
+## SEO
+`npm run build` compila la web (`dist/`) y el renderizado en servidor (`dist-ssr/`): cada página llega a Google
+ya escrita. Páginas por ruta generadas desde las tarifas: `/traslados`, `/traslados/sevilla-<destino>`,
+`/traslados/aeropuerto-sevilla` y sus versiones en inglés en `/en/transfers/…`. El servidor genera `/sitemap.xml` y
+`/robots.txt`. Solo se deja indexar cuando `BASE_URL` es el dominio definitivo (no `*.up.railway.app` ni localhost).
+
 ## Guía de Sevilla (`/guia`)
 Página aparte para pasar a los clientes por enlace (`/guia?lang=en|it|fr` abre en ese idioma). Se compila junto a la web
 (`web/guia.html`, entrada propia en `vite.config.mjs`) pero no comparte menú ni enlaces. Textos en

@@ -5,32 +5,42 @@ import Fleet from './Fleet.jsx';
 import BookingForm from './BookingForm.jsx';
 import { FixedRates, KmRates, PriceTable, Coverage } from './Rates.jsx';
 import { fill, withLang } from './util.js';
+import { HOME, ROUTES_INDEX, resolvePage, pagePath, routeList, routePath, routeVars } from './routes.js';
+import { RoutePage, RoutesIndex } from './RoutePage.jsx';
 
-// Idioma inicial: ?lang=en. En la página de pago, si no viene, se usa el del navegador.
-function initialLang() {
-  const param = new URLSearchParams(location.search).get('lang');
+// Idioma: lo marca la URL (/en/…, o ?lang=en en las páginas legales y de pago).
+// En la página de pago, si no viene, se usa el del navegador.
+function langFor(url, payToken) {
+  const param = new URLSearchParams(url.search).get('lang');
   if (param) return param === 'en' ? 'EN' : 'ES';
-  return payTokenFromPath() && !/^es\b/i.test(navigator.language || 'es') ? 'EN' : 'ES';
+  if (payToken && typeof navigator !== 'undefined') return /^es\b/i.test(navigator.language || 'es') ? 'ES' : 'EN';
+  return 'ES';
 }
 
-export default function App({ content }) {
-  const [lang, setLang] = useState(initialLang);
+// url = { pathname, search }: en el navegador sale de location; en el servidor, de la petición (SSR)
+export default function App({ content, url }) {
+  const pathname = url.pathname.replace(/[/]+$/, '') || '/';
+  const legalPage = LEGAL_PATHS[pathname];
+  const payToken = payTokenFromPath(url.pathname);
+  const page = legalPage || payToken ? null : resolvePage(url.pathname, url.search, content.pricing) || { kind: 'home', lang: 'ES' };
+  const lang = page ? page.lang : langFor(url, payToken);
   const [preset, setPreset] = useState(null);
   const t = content[lang];
   const img = content.images;
   const waBase = `https://wa.me/${content.contact.whatsapp}`;
-  const legalPage = LEGAL_PATHS[location.pathname.replace(/\/+$/, '')];
-  const payToken = payTokenFromPath();
 
   useEffect(() => { document.documentElement.lang = lang.toLowerCase(); }, [lang]);
 
+  // El botón ES/EN lleva a la misma página en el otro idioma
+  const langHref = code => (page ? pagePath(page, code) : code === 'EN' ? `${url.pathname}?lang=en` : url.pathname);
   const langButton = code => (
-    <button
-      onClick={() => setLang(code)}
+    <a
+      href={langHref(code)}
+      hrefLang={code.toLowerCase()}
       className={`text-[12px] tracking-[0.2em] font-medium px-2 py-1 rounded ${lang === code ? 'bg-[#C5A46A] text-black' : 'text-white/60 hover:text-white'}`}
     >
       {code}
-    </button>
+    </a>
   );
   const langSwitch = (
     <div className="flex items-center gap-1">
@@ -39,7 +49,7 @@ export default function App({ content }) {
       {langButton('EN')}
     </div>
   );
-  const footer = <Footer t={t} img={img} lang={lang} />;
+  const footer = <Footer t={t} img={img} lang={lang} p={content.pricing} />;
 
   // Páginas secundarias (legales y pago): cabecera sencilla + pie
   if (legalPage || payToken) {
@@ -47,12 +57,12 @@ export default function App({ content }) {
       <div className="min-h-screen bg-[#0A0A0A] text-[#F7F3ED] antialiased selection:bg-[#C5A46A]/30">
         <header className="border-b border-white/[0.06]">
           <div className="mx-auto max-w-[1440px] px-6 md:px-10 h-[72px] flex items-center justify-between gap-4">
-            <a href={withLang('/', lang)}>
+            <a href={HOME[lang]}>
               <img src={img.logo} alt={`${t.brand.name} logo`} className="h-[44px] w-auto rounded-[10px] object-contain bg-white p-1" />
             </a>
             <div className="flex items-center gap-5">
               {langSwitch}
-              <a href={withLang('/', lang)} className="hidden sm:inline text-[11px] tracking-[0.2em] text-white/60 hover:text-white transition">← {t.footer.legal.back.toUpperCase()}</a>
+              <a href={HOME[lang]} className="hidden sm:inline text-[11px] tracking-[0.2em] text-white/60 hover:text-white transition">← {t.footer.legal.back.toUpperCase()}</a>
             </div>
           </div>
         </header>
@@ -71,42 +81,64 @@ export default function App({ content }) {
   };
   const pricing = content.pricing;
   const fleetThumbs = content.fleet.map(c => c.images[0]).filter(Boolean).slice(0, 2);
+  const isHome = page.kind === 'home';
+  const anchor = id => (isHome ? `#${id}` : `${HOME[lang]}#${id}`); // en otras páginas, a la sección de la portada
+  const bookHref = page.kind === 'route' || isHome ? '#reserva' : `${HOME[lang]}#reserva`;
+
+  const header = (
+    <header className="sticky top-0 z-50 bg-[#0A0A0A]/90 backdrop-blur-2xl border-b border-white/[0.06]">
+      <div className="mx-auto max-w-[1440px] px-6 md:px-10 h-[72px] flex items-center justify-between">
+        <a href={HOME[lang]} className="flex items-center gap-4">
+          <img src={img.logo} alt={`${t.brand.name} logo`} width="88" height="44" className="h-[44px] w-auto rounded-[10px] object-contain bg-white p-1" />
+          <div className="hidden md:block h-[32px] w-px bg-white/10" />
+          <div className="hidden md:block leading-none">
+            <div className="serif text-[18px] font-semibold tracking-wide">{t.brand.name}</div>
+            <div className="text-[10px] tracking-[0.28em] text-[#C5A46A] mt-0.5">{t.brand.tagline}</div>
+          </div>
+        </a>
+        <nav className="hidden xl:flex items-center gap-8 text-[11px] tracking-[0.18em] text-white/60">
+          <a href={anchor('flota')} className="hover:text-white transition">{t.nav.fleet}</a>
+          <a href={anchor('tarifas')} className="hover:text-white transition">{t.nav.rates}</a>
+          <a href={ROUTES_INDEX[lang]} className={`transition ${page.kind === 'routes' || page.kind === 'route' ? 'text-white' : 'hover:text-white'}`}>{t.routes.nav}</a>
+          <a href={anchor('clases')} className="hover:text-white transition">{t.nav.classes}</a>
+          <a href={anchor('conductores')} className="hover:text-white transition">{t.nav.drivers}</a>
+          <a href={anchor('servicios')} className="hover:text-white transition">{t.nav.services}</a>
+        </nav>
+        <div className="flex items-center gap-3">
+          {langSwitch}
+          <a href={bookHref} className="hidden md:inline-flex h-10 px-6 items-center justify-center rounded-full bg-white text-black text-[11px] tracking-[0.2em] font-semibold hover:bg-[#F7F3ED] transition">
+            {t.nav.book.toUpperCase()}
+          </a>
+          <a href={waBase} target="_blank" rel="noopener" aria-label="WhatsApp" className="h-10 w-10 grid place-items-center rounded-full border border-[#C5A46A]/40 text-[#C5A46A] hover:bg-[#C5A46A] hover:text-black transition">
+            WA
+          </a>
+        </div>
+      </div>
+    </header>
+  );
+
+  // Páginas de traslados (SEO): una por ruta y el índice
+  if (!isHome) {
+    return (
+      <div className="min-h-screen bg-[#0A0A0A] text-[#F7F3ED] antialiased selection:bg-[#C5A46A]/30">
+        {header}
+        <main>
+          {page.kind === 'route'
+            ? <RoutePage route={page.route} content={content} t={t} lang={lang} waBase={waBase} />
+            : <RoutesIndex content={content} t={t} lang={lang} notFound={page.kind === 'notfound'} />}
+        </main>
+        {footer}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-[#F7F3ED] antialiased selection:bg-[#C5A46A]/30">
-      {/* Cabecera */}
-      <header className="sticky top-0 z-50 bg-[#0A0A0A]/90 backdrop-blur-2xl border-b border-white/[0.06]">
-        <div className="mx-auto max-w-[1440px] px-6 md:px-10 h-[72px] flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img src={img.logo} alt={`${t.brand.name} logo`} className="h-[44px] w-auto rounded-[10px] object-contain bg-white p-1" />
-            <div className="hidden md:block h-[32px] w-px bg-white/10" />
-            <div className="hidden md:block leading-none">
-              <div className="serif text-[18px] font-semibold tracking-wide">{t.brand.name}</div>
-              <div className="text-[10px] tracking-[0.28em] text-[#C5A46A] mt-0.5">{t.brand.tagline}</div>
-            </div>
-          </div>
-          <nav className="hidden xl:flex items-center gap-8 text-[11px] tracking-[0.18em] text-white/60">
-            <a href="#flota" className="hover:text-white transition">{t.nav.fleet}</a>
-            <a href="#tarifas" className="hover:text-white transition">{t.nav.rates}</a>
-            <a href="#clases" className="hover:text-white transition">{t.nav.classes}</a>
-            <a href="#conductores" className="hover:text-white transition">{t.nav.drivers}</a>
-            <a href="#destinos" className="hover:text-white transition">{t.nav.destinations}</a>
-            <a href="#servicios" className="hover:text-white transition">{t.nav.services}</a>
-          </nav>
-          <div className="flex items-center gap-3">
-            {langSwitch}
-            <a href="#reserva" className="hidden md:inline-flex h-10 px-6 items-center justify-center rounded-full bg-white text-black text-[11px] tracking-[0.2em] font-semibold hover:bg-[#F7F3ED] transition">
-              {t.nav.book.toUpperCase()}
-            </a>
-            <a href={waBase} target="_blank" rel="noopener" className="h-10 w-10 grid place-items-center rounded-full border border-[#C5A46A]/40 text-[#C5A46A] hover:bg-[#C5A46A] hover:text-black transition">
-              WA
-            </a>
-          </div>
-        </div>
-      </header>
+      {header}
 
       {/* Portada */}
       <section className="relative w-full bg-[#080808] flex flex-col items-center justify-center overflow-hidden">
+        <h1 className="sr-only">{t.brand.name} · {t.routes.homeH1}</h1>
         {t.hero.badge && (
           <div className="absolute top-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-3 px-4 py-2 rounded-full bg-black/70 border border-[#C5A46A]/30 backdrop-blur">
             <span className="h-2 w-2 rounded-full bg-[#C5A46A] animate-pulse" />
@@ -301,7 +333,9 @@ export default function App({ content }) {
   );
 }
 
-function Footer({ t, img, lang }) {
+function Footer({ t, img, lang, p }) {
+  // Enlaces a las rutas más buscadas (también ayudan a Google a descubrir las páginas de traslados)
+  const popular = routeList(p).filter(x => x.kind === "airport" || x.dest.type === "ciudad").slice(0, 9);
   const links = [['/aviso-legal', t.footer.legal.notice], ['/privacidad', t.footer.legal.privacy], ['/cookies', t.footer.legal.cookies], ['/condiciones', t.footer.legal.terms]];
   return (
     <footer className="bg-[#070707] border-t border-white/10">
@@ -320,6 +354,16 @@ function Footer({ t, img, lang }) {
           </div>
           <div className="mt-6 serif italic text-[#C5A46A] text-[18px]">— {t.footer.firm}</div>
         </div>
+        <nav aria-label={t.routes.popularTitle} className="text-[12px] leading-relaxed">
+          <div className="text-[11px] tracking-[0.2em] text-[#C5A46A] mb-3">{t.routes.popularTitle.toUpperCase()}</div>
+          <ul className="space-y-1.5">
+            {popular.map(x => {
+              const v = routeVars(x, t, p, lang);
+              return <li key={x.key}><a href={routePath(x, lang)} className="text-white/60 hover:text-white transition">{v.from} → {v.to}</a></li>;
+            })}
+            <li><a href={ROUTES_INDEX[lang]} className="text-[#C5A46A] hover:text-white transition">{t.routes.viewAll} →</a></li>
+          </ul>
+        </nav>
         <div className="text-[11px] tracking-[0.2em] text-white/40 leading-relaxed">
           {t.footer.services.map((s, i) => <div key={i}>{s}</div>)}
           <br />

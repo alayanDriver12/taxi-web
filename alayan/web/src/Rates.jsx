@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { fill } from './util.js';
 import { money } from './pricing.js';
+import { routePath } from './routes.js';
 
 export function FixedRates({ t, p, lang, onBook }) {
   const r = t.rates;
@@ -191,7 +192,7 @@ export function PriceTable({ t, p, lang, onBook }) {
             {rows.map(d => (
               <div key={d.id} className="grid grid-cols-[1fr_auto] md:grid-cols-[1.6fr_0.5fr_0.6fr_0.6fr_auto] gap-3 items-center px-6 md:px-8 py-4 hover:bg-[#F7F3ED] transition">
                 <div className="min-w-0">
-                  <div className="serif text-[18px] truncate">{d.name}</div>
+                  <a href={routePath({ kind: 'route', key: d.id, dest: d }, lang)} className="serif text-[18px] truncate block hover:text-[#9a7b45] transition">{d.name}</a>
                   <div className="text-[11px] text-black/40 mt-0.5">{d.zone}{d.zone ? ' · ' : ''}{d.km} km</div>
                 </div>
                 <div className="hidden md:block text-center text-[12px] text-black/60">{d.km} km</div>

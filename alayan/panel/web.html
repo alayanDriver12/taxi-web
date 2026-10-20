@@ -64,7 +64,7 @@ const $ = id => document.getElementById(id);
 
 const SECTION_NAMES = {
   legal: 'Datos legales', general: 'General y SEO', images: 'Imágenes', backup: 'Copias de seguridad',
-  brand: 'Marca', nav: 'Menú', hero: 'Portada', exp: 'Experiencia', slogans: 'Lemas', fleet: 'Flota (títulos)', rates: 'Tarifas (textos)',
+  brand: 'Marca', nav: 'Menú', hero: 'Portada', exp: 'Experiencia', slogans: 'Lemas', fleet: 'Flota (títulos)', rates: 'Tarifas (textos)', routes: 'Páginas de traslados (SEO)',
   classes: 'Clases y precios', drivers: 'Conductores', destinations: 'Destinos', services: 'Servicios',
   booking: 'Reserva', payment: 'Página de pago', notify: 'Avisos al cliente', footer: 'Pie de página'
 };
@@ -134,6 +134,10 @@ const HINTS = {
   'rates.kmNote': 'Se rellena con las tarifas: {minimum} mínimo, {supplement} suplemento, {km} km, {pct} % de la Tarifa 2, {start} y {end} horario nocturno.',
   'rates.kmExamples': 'Nombres de destinos de la tabla (tal cual están en «Tarifas») que salen como ejemplo.',
   'booking.pay': '{amount} se sustituye por el precio.',
+  'routes.title': 'Título de cada página de traslado. {from} = Sevilla, {to} = destino. Variables en esta sección: {from} {to} {km} {duration} {price} {t1} {t2} {max} {extra} {small} {large} {smallPax} {maxPax}.',
+  'routes.seoTitle': 'Lo que sale en Google como título (máx. ~60 caracteres).',
+  'routes.seoDescription': 'Lo que sale en Google bajo el título (máx. ~155 caracteres).',
+  'routes.homeH1': 'Título principal de la portada para Google (no se ve: la portada es la imagen).',
   'booking.extrasIncluded': '{amount} se sustituye por lo que suman los extras. Los precios se cambian en «Tarifas».',
   'booking.pmrNote': '{max} se sustituye por el máximo de pasajeros con movilidad reducida.',
   'footer.bottomLeft': 'Vacío = no se muestra.',

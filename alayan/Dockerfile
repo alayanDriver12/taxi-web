@@ -12,6 +12,7 @@ FROM node:20-slim
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/dist-ssr ./dist-ssr
 COPY package.json server.js ./
 COPY lib ./lib
 COPY content ./content

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { fill, withLang } from './util.js';
 
-export const payTokenFromPath = () => location.pathname.match(/^\/pago\/([A-Za-z0-9_-]{32})\/?$/)?.[1] || null;
+export const payTokenFromPath = (pathname = location.pathname) => pathname.match(/^\/pago\/([A-Za-z0-9_-]{32})\/?$/)?.[1] || null;
 
 const POLL_MS = 2500;
 const POLL_MAX = 12; // ~30 s

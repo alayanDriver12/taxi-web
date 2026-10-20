@@ -133,6 +133,17 @@ try {
   ok((await call('/api/pay/' + tokenOf(bk4.data.payUrl))).data.state === 'cancelled', 'reserva cancelada: la página lo dice');
   ok((await call(`/api/pay/${tokenOf(bk4.data.payUrl)}/checkout`, { body: { accept: true } })).status >= 400, 'reserva cancelada: no deja pagar');
 
+  section('SEO');
+  const rp = await call('/traslados/sevilla-malaga');
+  ok(rp.status === 200 && rp.data.includes('<h1') && rp.data.includes('Málaga'), 'la página de una ruta llega ya con su contenido (SSR)');
+  ok(rp.data.includes('rel="canonical"') && rp.data.includes('hreflang="en"') && rp.data.includes('application/ld+json'), 'canónica, idiomas y datos estructurados');
+  ok((await call('/en/transfers/seville-airport')).data.includes('Seville Airport'), 'versión en inglés');
+  ok((await call('/traslados/no-existe')).status === 404, 'ruta desconocida: 404');
+  ok((await call('/?lang=en')).status === 301, '?lang=en redirige a /en');
+  const sm = await call('/sitemap.xml');
+  ok(sm.status === 200 && (sm.data.match(/<loc>/g) || []).length > 60, 'sitemap.xml con todas las páginas');
+  ok((await call('/robots.txt')).data.includes('Disallow: /'), 'fuera del dominio definitivo no se deja indexar');
+
   section('Permisos');
   ok((await call('/api/panel/users', { as: 'admin', body: { username: 'gestor1', name: 'Gestor', role: 'gestor', password: 'gestor-pass-1' } })).status < 300, 'el admin crea un gestor');
   await login('gestor', 'gestor1', 'gestor-pass-1');

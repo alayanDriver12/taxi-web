@@ -20,3 +20,4 @@ Thumbs.db
 
 # Web compilada (se genera con npm run build)
 dist/
+dist-ssr/

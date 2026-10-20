@@ -1,5 +1,5 @@
 import React from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, hydrateRoot } from 'react-dom/client';
 // Fuentes servidas desde nuestro servidor (no desde Google): sin enviar la IP del visitante a terceros
 import '@fontsource/inter/300.css';
 import '@fontsource/inter/400.css';
@@ -20,9 +20,13 @@ async function loadContent() {
 }
 
 loadContent().then(content => {
-  createRoot(document.getElementById('root')).render(
+  const root = document.getElementById('root');
+  const app = (
     <React.StrictMode>
-      <App content={content} />
+      <App content={content} url={{ pathname: location.pathname, search: location.search }} />
     </React.StrictMode>
   );
+  // Si el servidor ya mandó la página pintada (SSR), React la «activa»; si no, la pinta desde cero
+  if (root.firstElementChild) hydrateRoot(root, app);
+  else createRoot(root).render(app);
 });
