@@ -137,7 +137,7 @@ function businessLd(data, baseUrl) {
   return {
     '@context': 'https://schema.org', '@type': 'LocalBusiness', '@id': baseUrl + '/#empresa',
     name: 'Alayan Driver', url: baseUrl + '/',
-    logo: baseUrl + data.images.logo, image: baseUrl + data.images.hero,
+    logo: baseUrl + '/img/icon-512.png', image: baseUrl + data.images.hero,
     description: data.seo.description,
     ...(phone ? { telephone: phone } : {}),
     ...(lg.email ? { email: lg.email } : {}),

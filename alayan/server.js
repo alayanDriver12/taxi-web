@@ -525,8 +525,6 @@ app.get('/login', (req, res, next) => (req.user ? res.redirect(homeFor(req.user)
 app.get('/reservas', auth.requirePage('admin', 'gestor'), panelPage('reservas.html'));
 app.get('/admin', auth.requirePage('admin'), panelPage('web.html'));
 app.get('/admin/usuarios', auth.requirePage('admin'), panelPage('usuarios.html'));
-// Icono de pestaña: el logo actual (los navegadores lo piden aunque no se enlace)
-app.get('/favicon.ico', (req, res) => res.redirect(302, content.get().images.logo));
 app.get('/admin/tarifas', auth.requirePage('admin'), panelPage('tarifas.html'));
 app.get('/admin/flota', auth.requirePage('admin'), panelPage('flota.html'));
 app.use('/panel', express.static(path.join(PANEL_DIR, 'assets'), { maxAge: '1h' }));
