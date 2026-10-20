@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { fill } from './util.js';
 import { money } from './pricing.js';
-import { routePath } from './routes.js';
+import { routePath, GROUP_PATH } from './routes.js';
 
 export function FixedRates({ t, p, lang, onBook }) {
   const r = t.rates;
@@ -39,7 +39,7 @@ export function FixedRates({ t, p, lang, onBook }) {
                 <span className="serif text-[56px] leading-none font-semibold">{money(c.price, lang)}</span>
                 <span className={`text-[11px] tracking-[0.25em] font-semibold px-3 py-1 rounded-full border ${c.dark ? 'text-[#C5A46A] border-[#C5A46A]/30' : 'text-black/40 border-black/10'}`}>{c.pax}</span>
               </div>
-              <div className={`relative serif text-[22px] mt-4 ${c.dark ? 'text-white/90' : ''}`}>{c.title}</div>
+              <div className={`relative serif text-[22px] mt-4 ${c.dark ? 'text-white/90' : ''}`}>{c.dark ? <a href={GROUP_PATH[lang]} className="underline decoration-[#C5A46A]/40 underline-offset-4 hover:text-[#C5A46A] transition">{c.title} →</a> : c.title}</div>
               <div className="relative mt-8 flex flex-wrap gap-2">
                 {c.points.map((pt, i) => (
                   <span key={i} className={`text-[11px] px-3 py-1.5 rounded-full border ${c.dark ? 'bg-white/[0.06] border-white/10 text-white/70' : 'bg-[#F7F3ED] border-black/5 text-black/70'}`}>• {pt}</span>

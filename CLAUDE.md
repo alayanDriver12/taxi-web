@@ -19,6 +19,9 @@ desarrollador: **español**. Todo el código vive en `alayan/`; el detalle técn
   textos en el contenido editable (`routes`). `sitemap.xml` y `robots.txt` los genera el servidor. **Solo se indexa en
   el dominio definitivo**: en `*.up.railway.app`/localhost todo va con `noindex` (forzable con `INDEXABLE=true|false`).
   `?lang=en` en la portada redirige 301 a `/en`.
+  **Palabra clave «taxi»** (licencia de taxi): portada «Taxi Sevilla 24 h…», rutas «Taxi Sevilla – X», y página
+  **/taxi-7-plazas-sevilla** (EN `/en/7-seater-taxi-seville`, textos en `group`) para «taxi 7/8 plazas Sevilla». No meter
+  palabras clave en el nombre de la ficha de Google (riesgo de suspensión): solo el nombre real del negocio.
   **IndexNow** (Bing y otros): clave derivada de BASE_URL en `/<clave>.txt`; avisa al guardar tarifas/textos/flota
   (10 min después) y al arrancar si hace >7 días. Las fotos que se suben desde el panel se reducen en el navegador
   (`shrinkImage` en `panel/assets/panel.js`): flota a WebP 1920 px; logo y portada en JPG/PNG (emails y WhatsApp).

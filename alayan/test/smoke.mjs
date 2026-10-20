@@ -164,6 +164,12 @@ try {
   const sm = await call('/sitemap.xml');
   ok(sm.status === 200 && (sm.data.match(/<loc>/g) || []).length > 60, 'sitemap.xml con todas las páginas');
   ok((await call('/robots.txt')).data.includes('Disallow: /'), 'fuera del dominio definitivo no se deja indexar');
+  const gp = await call('/taxi-7-plazas-sevilla');
+  ok(gp.status === 200 && gp.data.includes('Taxi 7 y 8 plazas en Sevilla') && gp.data.includes('FAQPage'), 'página «Taxi 7 y 8 plazas» con su contenido y preguntas para Google');
+  ok((await call('/en/7-seater-taxi-seville')).data.includes('7 and 8-seater taxi'), 'versión en inglés de la página de 7-8 plazas');
+  ok((await call('/')).data.includes('<title>Taxi Sevilla 24 h'), 'la portada se presenta a Google como «Taxi Sevilla 24 h»');
+  ok((await call('/traslados/sevilla-malaga')).data.includes('<title>Taxi Sevilla – Málaga'), 'las rutas empiezan por «Taxi»');
+  ok(sm.data.includes('/taxi-7-plazas-sevilla'), 'la página de 7-8 plazas está en el sitemap');
 
   section('Permisos');
   ok((await call('/api/panel/users', { as: 'admin', body: { username: 'gestor1', name: 'Gestor', role: 'gestor', password: 'gestor-pass-1' } })).status < 300, 'el admin crea un gestor');

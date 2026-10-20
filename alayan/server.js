@@ -716,7 +716,7 @@ async function sendIndex(req, res, opts) {
 app.get('/', (req, res, next) => (req.query.lang === 'en' ? res.redirect(301, '/en') : next()));
 
 // Portada, páginas de traslados (una por ruta de la tabla de tarifas) y páginas legales
-app.get(['/', '/index.html', '/en', '/traslados', '/traslados/:slug', '/en/transfers', '/en/transfers/:slug', ...Object.keys(LEGAL_PAGES)], (req, res) => {
+app.get(['/', '/index.html', '/en', '/traslados', '/traslados/:slug', '/en/transfers', '/en/transfers/:slug', '/taxi-7-plazas-sevilla', '/en/7-seater-taxi-seville', ...Object.keys(LEGAL_PAGES)], (req, res) => {
   const legalKey = LEGAL_PAGES[req.path.replace(/[/]+$/, '')];
   res.set('Cache-Control', 'no-cache');
   sendIndex(req, res, { pageTitle: legalKey && content.get().ES.footer.legal[legalKey] });

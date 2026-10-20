@@ -4,7 +4,7 @@ import { useState } from 'react';
 import BookingForm from './BookingForm.jsx';
 import { fill } from './util.js';
 import { money } from './pricing.js';
-import { HOME, ROUTES_INDEX, routeList, routePath, routeVars } from './routes.js';
+import { HOME, ROUTES_INDEX, GROUP_PATH, routeList, routePath, routeVars } from './routes.js';
 
 function Breadcrumb({ items }) {
   return (
@@ -147,6 +147,81 @@ export function RoutePage({ route, content, t, lang, waBase }) {
 
       <Faq title={r.faqTitle} items={faq} />
       <RouteLinks title={fill(r.otherTitle, v)} routes={related} p={p} t={t} lang={lang} current={route.key} />
+    </>
+  );
+}
+
+// Página «Taxi 7 y 8 plazas en Sevilla» (/taxi-7-plazas-sevilla): furgoneta para grupos y familias
+export function GroupPage({ content, t, lang, waBase }) {
+  const g = t.group, r = t.routes, p = content.pricing;
+  const v = routeVars({ kind: 'airport' }, t, p, lang);
+  const title = fill(g.title, v);
+  // Foto: la furgoneta de la flota (nombre con «furgoneta», «van» u «8»), si no, el primer coche
+  const van = content.fleet.find(c => /furgoneta|van|8/i.test(c.ES.name)) || content.fleet[0];
+  const photo = van?.images?.[0];
+  const faq = g.faq.map(f => ({ q: fill(f.q, v), a: fill(f.a, v) }));
+  const all = routeList(p);
+  const related = [...all.filter(x => x.kind === 'airport'), ...all.filter(x => x.dest?.type === 'ciudad')].slice(0, 8);
+  return (
+    <>
+      <section className="relative bg-[#0A0A0A] overflow-hidden">
+        <div className="pointer-events-none absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full bg-[#C5A46A]/10 blur-3xl" />
+        <div className="relative mx-auto max-w-[1440px] px-6 md:px-10 pt-10 pb-14 md:pt-14 md:pb-20">
+          <Breadcrumb items={[[r.home, HOME[lang]], [title]]} />
+          <div className="mt-8 grid lg:grid-cols-[1.05fr_0.95fr] gap-10 items-center">
+            <div>
+              <div className="text-[11px] tracking-[0.35em] text-[#C5A46A]">{g.kicker}</div>
+              <h1 className="serif mt-4 text-[44px] md:text-[68px] leading-[0.95]">{title}</h1>
+              <p className="mt-5 text-[16px] md:text-[18px] text-white/65 max-w-[620px]">{fill(g.subtitle, v)}</p>
+              <p className="mt-6 text-[15px] leading-relaxed text-white/55 max-w-[680px]">{fill(g.intro, v)}</p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a href="#reserva" className="h-12 px-8 inline-flex items-center rounded-full bg-[#C5A46A] text-black text-[12px] tracking-[0.2em] font-semibold hover:brightness-110 transition">{t.nav.book.toUpperCase()} · {v.large}</a>
+                <a href={waBase} target="_blank" rel="noopener" className="h-12 px-6 inline-flex items-center rounded-full border border-white/20 text-[12px] tracking-[0.18em] hover:bg-white hover:text-black transition">WHATSAPP</a>
+              </div>
+            </div>
+            <div>
+              {photo && <img src={photo} alt={title} className="w-full aspect-[4/3] object-cover rounded-[28px] border border-white/10" />}
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                {g.facts.map(f => (
+                  <div key={f.label} className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <div className="text-[10px] tracking-[0.2em] text-white/45 uppercase">{f.label}</div>
+                    <div className="serif mt-1 text-[24px] leading-none">{fill(f.value, v)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#F7F3ED] text-black">
+        <div className="mx-auto max-w-[1440px] px-6 md:px-10 py-14">
+          <h2 className="serif text-[32px] md:text-[42px]">{g.usesTitle}</h2>
+          <ul className="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {g.uses.map(u => <li key={u} className="rounded-2xl bg-white border border-black/10 px-5 py-4 text-[14px]">✓ {u}</li>)}
+          </ul>
+        </div>
+      </section>
+
+      <section id="reserva" className="bg-[#0A0A0A] border-t border-white/10 scroll-mt-20">
+        <div className="mx-auto max-w-[1440px] px-6 md:px-10 py-16 md:py-20 grid lg:grid-cols-[0.8fr_1.2fr] gap-10">
+          <div>
+            <h2 className="serif text-[36px] md:text-[46px] leading-[0.95]">{g.bookTitle}</h2>
+            <div className="mt-8 rounded-[20px] bg-white/[0.04] border border-white/10 p-6">
+              <div className="text-[12px] tracking-[0.2em] text-white/60">{r.includesTitle.toUpperCase()}</div>
+              <ul className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-[13px] text-white/70">
+                {t.booking.includes.map((item, i) => <li key={i}>✓ {item}</li>)}
+              </ul>
+            </div>
+          </div>
+          <div className="rounded-[28px] bg-[#F7F3ED] text-black p-6 md:p-8 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
+            <BookingForm t={t} p={p} lang={lang} waBase={waBase} owner={content.legal.owner} preset={{ mode: 'airport', pax: p.airport.smallMaxPax + 1 }} />
+          </div>
+        </div>
+      </section>
+
+      <Faq title={g.faqTitle} items={faq} />
+      <RouteLinks title={fill(r.otherTitle, v)} routes={related} p={p} t={t} lang={lang} current="" />
     </>
   );
 }

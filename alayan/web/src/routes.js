@@ -6,6 +6,8 @@ import { money } from './pricing.js';
 
 export const HOME = { ES: '/', EN: '/en' };
 export const ROUTES_INDEX = { ES: '/traslados', EN: '/en/transfers' };
+// Página de taxi grande (furgoneta 7-8 plazas): búsqueda con poca competencia
+export const GROUP_PATH = { ES: '/taxi-7-plazas-sevilla', EN: '/en/7-seater-taxi-seville' };
 const AIRPORT_SLUG = { ES: 'aeropuerto-sevilla', EN: 'seville-airport' };
 const CITY_SLUG = { ES: 'sevilla', EN: 'seville' };
 
@@ -25,6 +27,7 @@ export function resolvePage(pathname, search, p) {
   const qsEn = new URLSearchParams(search || '').get('lang') === 'en';
   if (path === '/') return { kind: 'home', lang: qsEn ? 'EN' : 'ES' };
   if (path === '/en') return { kind: 'home', lang: 'EN' };
+  for (const lang of ['ES', 'EN']) if (path === GROUP_PATH[lang]) return { kind: 'group', lang };
   for (const lang of ['ES', 'EN']) {
     const base = ROUTES_INDEX[lang];
     if (path === base) return { kind: 'routes', lang };
@@ -39,6 +42,7 @@ export function resolvePage(pathname, search, p) {
 // Ruta equivalente en el otro idioma (para el botón ES/EN y hreflang)
 export function pagePath(page, lang) {
   if (page.kind === 'route') return routePath(page.route, lang);
+  if (page.kind === 'group') return GROUP_PATH[lang];
   if (page.kind === 'routes' || page.kind === 'notfound') return ROUTES_INDEX[lang];
   return HOME[lang];
 }
@@ -80,6 +84,20 @@ export function headFor(page, data, baseUrl) {
     title = lang === 'EN' ? r.homeSeoTitle : data.seo.title;
     description = lang === 'EN' ? r.homeSeoDescription : data.seo.description;
     jsonld = [business];
+  } else if (page.kind === 'group') {
+    const g = t.group, v = routeVars({ kind: 'airport' }, t, p, lang);
+    title = fill(g.seoTitle, v);
+    description = fill(g.seoDescription, v);
+    jsonld = [
+      business,
+      {
+        '@context': 'https://schema.org', '@type': 'TaxiService', name: fill(g.title, v), description,
+        url: abs(GROUP_PATH[lang]), provider: { '@id': baseUrl + '/#empresa' }, areaServed: { '@type': 'State', name: 'Andalucía' },
+        offers: { '@type': 'Offer', priceCurrency: 'EUR', price: p.airport.large, url: abs(GROUP_PATH[lang]), availability: 'https://schema.org/InStock' }
+      },
+      { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: g.faq.map(x => ({ '@type': 'Question', name: fill(x.q, v), acceptedAnswer: { '@type': 'Answer', text: fill(x.a, v) } })) },
+      breadcrumbLd([[r.home, HOME[lang]], [fill(g.title, v), GROUP_PATH[lang]]], abs)
+    ];
   } else if (page.kind === 'routes' || page.kind === 'notfound') {
     const vars = { count: p.destinations.length };
     title = fill(r.indexSeoTitle, vars);
@@ -152,10 +170,10 @@ function businessLd(data, baseUrl) {
 
 // Todas las URL indexables con sus versiones por idioma (para sitemap.xml)
 export function sitemapPages(p) {
-  const pages = [{ kind: 'home' }, { kind: 'routes' }, ...routeList(p).map(route => ({ kind: 'route', route }))];
+  const pages = [{ kind: 'home' }, { kind: 'group' }, { kind: 'routes' }, ...routeList(p).map(route => ({ kind: 'route', route }))];
   return pages.map(pg => ({
     es: pagePath({ ...pg, lang: 'ES' }, 'ES'),
     en: pagePath({ ...pg, lang: 'EN' }, 'EN'),
-    priority: pg.kind === 'home' ? '1.0' : pg.kind === 'routes' || pg.route?.kind === 'airport' ? '0.9' : '0.7'
+    priority: pg.kind === 'home' ? '1.0' : pg.kind === 'routes' || pg.kind === 'group' || pg.route?.kind === 'airport' ? '0.9' : '0.7'
   }));
 }

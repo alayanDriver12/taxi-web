@@ -43,6 +43,16 @@ function sanitize(value, tpl) {
 const RENAMED = {
   ES: {
     'Silla infantil gratis': 'Silla infantil (5 €)',
+    "TRASLADO PRIVADO CON CONDUCTOR": "TAXI Y TRASLADO PRIVADO",
+    "Traslado {from} – {to}": "Taxi {from} – {to}",
+    "Traslado {from} – {to} desde {price}: taxi y transfer privado": "Taxi {from} – {to} desde {price}: precio cerrado",
+    "Transfer privado de {from} a {to}: {km} km, unos {duration}. Precio cerrado desde {price} con IVA y peajes. Reserva y paga online. Conductor profesional 24/7.": "Taxi de {from} a {to}: {km} km, unos {duration}. Precio cerrado desde {price} con IVA y peajes. Reserva y paga online. Servicio 24 h.",
+    "Taxi y transfer Aeropuerto de Sevilla": "Taxi Aeropuerto de Sevilla",
+    "Taxi Aeropuerto de Sevilla a precio fijo ({small}): transfer privado": "Taxi Aeropuerto de Sevilla: precio fijo {small} · 24 h",
+    "Transfer del aeropuerto de Sevilla (SVQ) a la ciudad a precio fijo: {small} hasta {smallPax} pasajeros y {large} hasta {maxPax}. Seguimiento del vuelo, Meet & Greet y pago online.": "Taxi del aeropuerto de Sevilla (SVQ) a la ciudad a precio fijo: {small} hasta {smallPax} pasajeros y {large} hasta {maxPax}. Seguimiento del vuelo, espera incluida y pago online. 24 h.",
+    "Traslados privados desde Sevilla": "Taxi desde Sevilla a toda Andalucía",
+    "Traslados privados desde Sevilla a toda Andalucía: precios": "Taxi desde Sevilla a toda Andalucía: precios cerrados",
+    "Traslados privados y taxi al aeropuerto en Sevilla y Andalucía": "Taxi en Sevilla 24 horas: aeropuerto, estación Santa Justa y toda Andalucía",
     'Agua + prensa': 'Agua de cortesía',
     'Agua y prensa': 'Agua de cortesía',
     '1-3 pasajeros': '1-4 pasajeros',
@@ -53,6 +63,17 @@ const RENAMED = {
   },
   EN: {
     'Free child seat': 'Child seat (€5)',
+    "PRIVATE TRANSFER WITH DRIVER": "PRIVATE TAXI & TRANSFER",
+    "Transfer {from} – {to}": "Taxi {from} to {to}",
+    "Transfer {from} to {to} from {price}: private taxi & transfer": "Taxi {from} to {to} from {price}: fixed price",
+    "Private transfer from {from} to {to}: {km} km, about {duration}. Fixed price from {price} incl. VAT and tolls. Book and pay online. Professional driver 24/7.": "Taxi from {from} to {to}: {km} km, about {duration}. Fixed price from {price} incl. VAT and tolls. Book and pay online. 24/7 service.",
+    "Seville Airport taxi & transfer": "Seville Airport taxi",
+    "Seville Airport taxi at a fixed price ({small}): private transfer": "Seville Airport taxi: fixed price {small} · 24h",
+    "Private transfers from Seville": "Taxi from Seville to all of Andalusia",
+    "Private transfers from Seville to all of Andalusia: prices": "Taxi from Seville to all of Andalusia: fixed prices",
+    "Alayan Driver · Private transfers in Seville and Andalusia": "Seville Taxi 24h · Airport at a fixed price | Alayan Driver",
+    "Private transfers and airport taxi in Seville and all of Andalusia. Fixed prices, professional drivers, premium vehicles and online payment.": "Taxi in Seville 24 hours: Seville Airport at a fixed price, Santa Justa station and transfers to all of Andalusia. 7 and 8-seater taxis for groups. Book online or on WhatsApp.",
+    "Private transfers and airport taxi in Seville and Andalusia": "Seville taxi 24 hours: airport, Santa Justa station and all of Andalusia",
     'Water + press': 'Complimentary water',
     'Water & press': 'Complimentary water',
     '1-3 passengers': '1-4 passengers',
@@ -93,6 +114,9 @@ function createContentStore(db) {
     let stored;
     try { stored = JSON.parse(row.value); } catch { return; }
     const next = { ...stored, ES: renameTexts(stored.ES, RENAMED.ES), EN: renameTexts(stored.EN, RENAMED.EN) };
+    // SEO de portada: del texto por defecto antiguo al nuevo (con «taxi»)
+    if (next.seo?.title === "Alayan Driver · Transfer en Andalucía") next.seo = { ...next.seo, title: "Taxi Sevilla 24 h · Aeropuerto a precio fijo | Alayan Driver" };
+    if (next.seo?.description === "Transfers privados en Sevilla y toda Andalucía. Aeropuertos, estaciones, hoteles y eventos.") next.seo = { ...next.seo, description: "Taxi en Sevilla 24 horas: aeropuerto SVQ a precio fijo, estación Santa Justa y traslados a toda Andalucía. Taxi 7 y 8 plazas para grupos. Reserva online o por WhatsApp." };
     if (OLD_WHATSAPP.includes(next.contact?.whatsapp)) next.contact = { ...next.contact, whatsapp: defaults.contact.whatsapp };
     if (next.legal && !next.legal.phone) next.legal = { ...next.legal, phone: defaults.legal.phone };
     if (JSON.stringify(next) !== JSON.stringify(stored)) {

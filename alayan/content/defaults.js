@@ -5,8 +5,8 @@
 module.exports = {
   contact: { whatsapp: '34620331295', reviewUrl: 'https://g.page/r/CfUaGTGzNjJ3ECE/review' },
   seo: {
-    title: 'Alayan Driver · Transfer en Andalucía',
-    description: 'Transfers privados en Sevilla y toda Andalucía. Aeropuertos, estaciones, hoteles y eventos.'
+    title: 'Taxi Sevilla 24 h · Aeropuerto a precio fijo | Alayan Driver',
+    description: 'Taxi en Sevilla 24 horas: aeropuerto SVQ a precio fijo, estación Santa Justa y traslados a toda Andalucía. Taxi 7 y 8 plazas para grupos. Reserva online o por WhatsApp.'
   },
   images: { logo: '/img/logo.jpg', hero: '/img/portada.jpg' },
   // Datos del titular para aviso legal, privacidad y condiciones (obligatorios por LSSI y RGPD)
@@ -95,16 +95,16 @@ module.exports = {
       city: 'Sevilla',
       airportName: 'Aeropuerto de Sevilla',
       home: 'Inicio',
-      kicker: 'TRASLADO PRIVADO CON CONDUCTOR',
-      title: 'Traslado {from} – {to}',
+      kicker: 'TAXI Y TRASLADO PRIVADO',
+      title: 'Taxi {from} – {to}',
       subtitle: 'Precio cerrado, conductor profesional y vehículo premium. Reserva online y paga con tarjeta.',
-      seoTitle: 'Traslado {from} – {to} desde {price}: taxi y transfer privado',
-      seoDescription: 'Transfer privado de {from} a {to}: {km} km, unos {duration}. Precio cerrado desde {price} con IVA y peajes. Reserva y paga online. Conductor profesional 24/7.',
+      seoTitle: 'Taxi {from} – {to} desde {price}: precio cerrado',
+      seoDescription: 'Taxi de {from} a {to}: {km} km, unos {duration}. Precio cerrado desde {price} con IVA y peajes. Reserva y paga online. Servicio 24 h.',
       intro: 'Viaja de {from} a {to} en vehículo privado con conductor profesional, puerta a puerta y sin paradas. El precio es cerrado y lo ves antes de reservar: {t1} de lunes a viernes en horario diurno y {t2} sábados, domingos, festivos y de noche. Incluye IVA, peajes y equipaje.',
-      airportTitle: 'Taxi y transfer Aeropuerto de Sevilla',
+      airportTitle: 'Taxi Aeropuerto de Sevilla',
       airportSubtitle: 'Precio fijo entre el aeropuerto de Sevilla (SVQ) y la ciudad, a cualquier hora. Seguimiento del vuelo incluido.',
-      airportSeoTitle: 'Taxi Aeropuerto de Sevilla a precio fijo ({small}): transfer privado',
-      airportSeoDescription: 'Transfer del aeropuerto de Sevilla (SVQ) a la ciudad a precio fijo: {small} hasta {smallPax} pasajeros y {large} hasta {maxPax}. Seguimiento del vuelo, Meet & Greet y pago online.',
+      airportSeoTitle: 'Taxi Aeropuerto de Sevilla: precio fijo {small} · 24 h',
+      airportSeoDescription: 'Taxi del aeropuerto de Sevilla (SVQ) a la ciudad a precio fijo: {small} hasta {smallPax} pasajeros y {large} hasta {maxPax}. Seguimiento del vuelo, espera incluida y pago online. 24 h.',
       airportIntro: 'Del aeropuerto de Sevilla (SVQ) a cualquier punto de la ciudad, o al revés, a precio fijo: {small} hasta {smallPax} pasajeros y {large} para grupos de hasta {maxPax}, cualquier día y a cualquier hora. Seguimos tu vuelo y te esperamos en llegadas con un cartel con tu nombre.',
       facts: { distance: 'Distancia', duration: 'Duración aprox.', pax: 'Pasajeros', price: 'Precio desde' },
       paxValue: 'Hasta {max}',
@@ -131,14 +131,14 @@ module.exports = {
       viewAll: 'Ver todos los traslados',
       fromPrice: 'desde',
       indexKicker: 'PRECIOS CERRADOS',
-      indexTitle: 'Traslados privados desde Sevilla',
+      indexTitle: 'Taxi desde Sevilla a toda Andalucía',
       indexSubtitle: 'Precio cerrado a pueblos y ciudades de toda Andalucía. Elige tu destino para ver el precio y reservar.',
-      indexSeoTitle: 'Traslados privados desde Sevilla a toda Andalucía: precios',
+      indexSeoTitle: 'Taxi desde Sevilla a toda Andalucía: precios cerrados',
       indexSeoDescription: 'Precios de traslados privados desde Sevilla a {count} destinos de Andalucía: Málaga, Córdoba, Granada, Cádiz, Jerez… Precio cerrado, IVA incluido y pago online.',
       airportCard: 'Aeropuerto de Sevilla ↔ ciudad',
       notFound: 'No encontramos ese traslado. Estos son todos los que tenemos con precio:',
       popularTitle: 'Traslados populares',
-      homeH1: 'Traslados privados y taxi al aeropuerto en Sevilla y Andalucía',
+      homeH1: 'Taxi en Sevilla 24 horas: aeropuerto, estación Santa Justa y toda Andalucía',
       homeSeoTitle: '',
       homeSeoDescription: ''
     },
@@ -153,6 +153,32 @@ module.exports = {
       another: 'Hacer otra reserva',
       invalid: 'Este enlace no es válido o está desactivado. Escríbenos y te ayudamos.',
       loading: 'Cargando…'
+    },
+    group: {
+      nav: 'Taxi 7-8 plazas',
+      kicker: 'TAXI GRANDE PARA GRUPOS',
+      title: 'Taxi 7 y 8 plazas en Sevilla',
+      subtitle: 'Furgoneta de hasta {maxPax} pasajeros con mucho espacio para maletas. Aeropuerto, Santa Justa, cruceros y toda Andalucía, 24 horas.',
+      seoTitle: 'Taxi 7 y 8 plazas en Sevilla 24 h · Aeropuerto {large}',
+      seoDescription: 'Taxi de 7 y 8 plazas en Sevilla para grupos y familias: hasta {maxPax} pasajeros con equipaje. Aeropuerto SVQ a precio fijo ({large}), Santa Justa y toda Andalucía. Reserva online 24 h.',
+      intro: '¿Sois un grupo, una familia o viajáis con mucho equipaje? Nuestra furgoneta de 8 plazas os lleva a todos juntos en un solo vehículo, sin tener que pedir dos taxis. Del aeropuerto de Sevilla a la ciudad el precio es fijo: {large} para {largeFrom}-{maxPax} pasajeros, a cualquier hora. A pueblos y ciudades de Andalucía, el mismo precio cerrado por trayecto.',
+      facts: [
+        { label: 'Pasajeros', value: 'Hasta {maxPax}' },
+        { label: 'Aeropuerto ↔ Sevilla', value: '{large}' },
+        { label: 'Equipaje', value: 'Maletero XXL' },
+        { label: 'Disponible', value: '24 h · 365 días' }
+      ],
+      usesTitle: 'Ideal para',
+      uses: ['Familias con niños (sillas infantiles bajo petición)', 'Grupos de amigos y despedidas', 'Golf: bolsas y equipaje voluminoso', 'Cruceros: puertos de Cádiz, Málaga y Huelva', 'Bodas, eventos y congresos', 'Empresas y equipos de trabajo'],
+      bookTitle: 'Reserva tu taxi grande',
+      faqTitle: 'Preguntas frecuentes',
+      faq: [
+        { q: '¿Cuánto cuesta un taxi de 7 u 8 plazas del aeropuerto de Sevilla al centro?', a: 'Precio fijo de {large} para {largeFrom} a {maxPax} pasajeros, a cualquier hora y con IVA incluido. Si sois de 1 a {smallPax}, {small}.' },
+        { q: '¿Cuántas maletas caben?', a: 'La furgoneta tiene maletero XXL: normalmente una maleta grande por pasajero más el equipaje de mano. Si lleváis bolsas de golf, carritos o mucho equipaje, indícalo al reservar.' },
+        { q: '¿Hacéis viajes de grupo a otras ciudades?', a: 'Sí: Málaga, Granada, Córdoba, Cádiz, Jerez, Huelva y cualquier pueblo de Andalucía, con precio cerrado antes de reservar.' },
+        { q: '¿Tenéis sillas para niños?', a: 'Sí: silla de bebé, silla de niño y alzador, por {extra} cada una. Indícalo al reservar.' },
+        { q: '¿Cómo se reserva y se paga?', a: 'Aquí mismo: eliges trayecto, fecha y pasajeros, ves el precio al momento y pagas con tarjeta, Apple Pay o Google Pay. También por WhatsApp.' }
+      ]
     },
     classes: {
       title: 'Elija su clase',
@@ -422,15 +448,15 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
       city: 'Seville',
       airportName: 'Seville Airport',
       home: 'Home',
-      kicker: 'PRIVATE TRANSFER WITH DRIVER',
-      title: 'Transfer {from} – {to}',
+      kicker: 'PRIVATE TAXI & TRANSFER',
+      title: 'Taxi {from} to {to}',
       subtitle: 'Fixed price, professional driver and premium vehicle. Book online and pay by card.',
-      seoTitle: 'Transfer {from} to {to} from {price}: private taxi & transfer',
-      seoDescription: 'Private transfer from {from} to {to}: {km} km, about {duration}. Fixed price from {price} incl. VAT and tolls. Book and pay online. Professional driver 24/7.',
+      seoTitle: 'Taxi {from} to {to} from {price}: fixed price',
+      seoDescription: 'Taxi from {from} to {to}: {km} km, about {duration}. Fixed price from {price} incl. VAT and tolls. Book and pay online. 24/7 service.',
       intro: 'Travel from {from} to {to} in a private vehicle with a professional driver, door to door and with no stops. The price is fixed and you see it before booking: {t1} Monday to Friday during the day and {t2} on Saturdays, Sundays, public holidays and at night. VAT, tolls and luggage included.',
-      airportTitle: 'Seville Airport taxi & transfer',
+      airportTitle: 'Seville Airport taxi',
       airportSubtitle: 'Fixed price between Seville Airport (SVQ) and the city, any time of day. Flight tracking included.',
-      airportSeoTitle: 'Seville Airport taxi at a fixed price ({small}): private transfer',
+      airportSeoTitle: 'Seville Airport taxi: fixed price {small} · 24h',
       airportSeoDescription: 'Transfer from Seville Airport (SVQ) to the city at a fixed price: {small} for up to {smallPax} passengers and {large} for up to {maxPax}. Flight tracking, Meet & Greet and online payment.',
       airportIntro: 'From Seville Airport (SVQ) to anywhere in the city, or the other way round, at a fixed price: {small} for up to {smallPax} passengers and {large} for groups of up to {maxPax}, any day and any time. We track your flight and wait for you at arrivals with a sign with your name.',
       facts: { distance: 'Distance', duration: 'Approx. time', pax: 'Passengers', price: 'Price from' },
@@ -458,16 +484,16 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
       viewAll: 'See all transfers',
       fromPrice: 'from',
       indexKicker: 'FIXED PRICES',
-      indexTitle: 'Private transfers from Seville',
+      indexTitle: 'Taxi from Seville to all of Andalusia',
       indexSubtitle: 'Fixed prices to towns and cities all over Andalusia. Choose your destination to see the price and book.',
-      indexSeoTitle: 'Private transfers from Seville to all of Andalusia: prices',
+      indexSeoTitle: 'Taxi from Seville to all of Andalusia: fixed prices',
       indexSeoDescription: 'Prices of private transfers from Seville to {count} destinations in Andalusia: Malaga, Cordoba, Granada, Cadiz, Jerez… Fixed price, VAT included and online payment.',
       airportCard: 'Seville Airport ↔ city',
       notFound: 'We could not find that transfer. These are all the ones with a fixed price:',
       popularTitle: 'Popular transfers',
-      homeH1: 'Private transfers and airport taxi in Seville and Andalusia',
-      homeSeoTitle: 'Alayan Driver · Private transfers in Seville and Andalusia',
-      homeSeoDescription: 'Private transfers and airport taxi in Seville and all of Andalusia. Fixed prices, professional drivers, premium vehicles and online payment.'
+      homeH1: 'Seville taxi 24 hours: airport, Santa Justa station and all of Andalusia',
+      homeSeoTitle: 'Seville Taxi 24h · Airport at a fixed price | Alayan Driver',
+      homeSeoDescription: 'Taxi in Seville 24 hours: Seville Airport at a fixed price, Santa Justa station and transfers to all of Andalusia. 7 and 8-seater taxis for groups. Book online or on WhatsApp.'
     },
     account: {
       kicker: 'BUSINESS BOOKINGS',
@@ -480,6 +506,32 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
       another: 'Make another booking',
       invalid: 'This link is not valid or has been disabled. Message us and we will help you.',
       loading: 'Loading…'
+    },
+    group: {
+      nav: '7-8 seater taxi',
+      kicker: 'LARGE TAXI FOR GROUPS',
+      title: '7 and 8-seater taxi in Seville',
+      subtitle: 'Van for up to {maxPax} passengers with plenty of luggage space. Airport, Santa Justa station, cruise ports and all of Andalusia, 24 hours.',
+      seoTitle: '7 & 8-seater taxi in Seville 24h · Airport {large}',
+      seoDescription: '7 and 8-seater taxi in Seville for groups and families: up to {maxPax} passengers with luggage. Seville Airport at a fixed price ({large}), Santa Justa and all of Andalusia. Book online 24h.',
+      intro: 'Travelling as a group, a family or with lots of luggage? Our 8-seater van takes you all together in one vehicle, no need for two taxis. From Seville Airport to the city the price is fixed: {large} for {largeFrom}-{maxPax} passengers, any time. To towns and cities in Andalusia, the same fixed price per trip.',
+      facts: [
+        { label: 'Passengers', value: 'Up to {maxPax}' },
+        { label: 'Airport ↔ Seville', value: '{large}' },
+        { label: 'Luggage', value: 'XXL boot' },
+        { label: 'Available', value: '24h · 365 days' }
+      ],
+      usesTitle: 'Ideal for',
+      uses: ['Families with children (child seats on request)', 'Groups of friends and stag/hen parties', 'Golf: bags and bulky luggage', 'Cruises: Cadiz, Malaga and Huelva ports', 'Weddings, events and conferences', 'Companies and work teams'],
+      bookTitle: 'Book your large taxi',
+      faqTitle: 'Frequently asked questions',
+      faq: [
+        { q: 'How much is a 7 or 8-seater taxi from Seville Airport to the city centre?', a: 'Fixed price of {large} for {largeFrom} to {maxPax} passengers, any time, VAT included. For 1 to {smallPax} passengers, {small}.' },
+        { q: 'How many suitcases fit?', a: 'The van has an XXL boot: usually one large suitcase per passenger plus hand luggage. If you carry golf bags, buggies or lots of luggage, tell us when booking.' },
+        { q: 'Do you do group trips to other cities?', a: 'Yes: Malaga, Granada, Cordoba, Cadiz, Jerez, Huelva and any town in Andalusia, with a fixed price before booking.' },
+        { q: 'Do you have child seats?', a: 'Yes: baby seat, child seat and booster, {extra} each. Just add it when booking.' },
+        { q: 'How do I book and pay?', a: 'Right here: choose route, date and passengers, see the price instantly and pay by card, Apple Pay or Google Pay. Also on WhatsApp.' }
+      ]
     },
     classes: {
       title: 'Choose your class',

@@ -5,8 +5,8 @@ import Fleet from './Fleet.jsx';
 import BookingForm from './BookingForm.jsx';
 import { FixedRates, KmRates, PriceTable, Coverage } from './Rates.jsx';
 import { fill, withLang } from './util.js';
-import { HOME, ROUTES_INDEX, resolvePage, pagePath, routeList, routePath, routeVars } from './routes.js';
-import { RoutePage, RoutesIndex } from './RoutePage.jsx';
+import { HOME, ROUTES_INDEX, GROUP_PATH, resolvePage, pagePath, routeList, routePath, routeVars } from './routes.js';
+import { RoutePage, RoutesIndex, GroupPage } from './RoutePage.jsx';
 import Account, { accountTokenFromPath } from './Account.jsx';
 
 // Idioma: lo marca la URL (/en/…, o ?lang=en en las páginas legales y de pago).
@@ -87,7 +87,7 @@ export default function App({ content, url }) {
   const fleetThumbs = content.fleet.map(c => c.images[0]).filter(Boolean).slice(0, 2);
   const isHome = page.kind === 'home';
   const anchor = id => (isHome ? `#${id}` : `${HOME[lang]}#${id}`); // en otras páginas, a la sección de la portada
-  const bookHref = page.kind === 'route' || isHome ? '#reserva' : `${HOME[lang]}#reserva`;
+  const bookHref = page.kind === 'route' || page.kind === 'group' || isHome ? '#reserva' : `${HOME[lang]}#reserva`;
 
   const header = (
     <header className="sticky top-0 z-50 bg-[#0A0A0A]/90 backdrop-blur-2xl border-b border-white/[0.06]">
@@ -104,6 +104,7 @@ export default function App({ content, url }) {
           <a href={anchor('flota')} className="hover:text-white transition">{t.nav.fleet}</a>
           <a href={anchor('tarifas')} className="hover:text-white transition">{t.nav.rates}</a>
           <a href={ROUTES_INDEX[lang]} className={`transition ${page.kind === 'routes' || page.kind === 'route' ? 'text-white' : 'hover:text-white'}`}>{t.routes.nav}</a>
+          <a href={GROUP_PATH[lang]} className={`transition ${page.kind === 'group' ? 'text-white' : 'hover:text-white'}`}>{t.group.nav}</a>
           <a href={anchor('clases')} className="hover:text-white transition">{t.nav.classes}</a>
           <a href={anchor('conductores')} className="hover:text-white transition">{t.nav.drivers}</a>
           <a href={anchor('servicios')} className="hover:text-white transition">{t.nav.services}</a>
@@ -127,7 +128,9 @@ export default function App({ content, url }) {
       <div className="min-h-screen bg-[#0A0A0A] text-[#F7F3ED] antialiased selection:bg-[#C5A46A]/30">
         {header}
         <main>
-          {page.kind === 'route'
+          {page.kind === 'group'
+            ? <GroupPage content={content} t={t} lang={lang} waBase={waBase} />
+            : page.kind === 'route'
             ? <RoutePage route={page.route} content={content} t={t} lang={lang} waBase={waBase} />
             : <RoutesIndex content={content} t={t} lang={lang} notFound={page.kind === 'notfound'} />}
         </main>
@@ -365,6 +368,7 @@ function Footer({ t, img, lang, p }) {
               const v = routeVars(x, t, p, lang);
               return <li key={x.key}><a href={routePath(x, lang)} className="text-white/60 hover:text-white transition">{v.from} → {v.to}</a></li>;
             })}
+            <li><a href={GROUP_PATH[lang]} className="text-white/60 hover:text-white transition">{t.group.title}</a></li>
             <li><a href={ROUTES_INDEX[lang]} className="text-[#C5A46A] hover:text-white transition">{t.routes.viewAll} →</a></li>
           </ul>
         </nav>
