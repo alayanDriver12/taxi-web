@@ -121,9 +121,12 @@ function createContentStore(db) {
   function saveTexts(input, username) {
     const whatsapp = String(input?.contact?.whatsapp ?? '').replace(/\D/g, '');
     if (!/^\d{8,15}$/.test(whatsapp)) throw new Error('El número de WhatsApp debe tener entre 8 y 15 dígitos, con prefijo de país (ej: 34612345678).');
+    // Enlace de reseñas de Google: solo https (lo copia el admin de su Perfil de Empresa)
+    const reviewUrl = String(input?.contact?.reviewUrl ?? '').trim().slice(0, 300);
+    if (reviewUrl && !/^https:[/][/][^ ]+$/.test(reviewUrl)) throw new Error('El enlace de reseñas debe empezar por https://');
     return write({
       ...get(),
-      contact: { whatsapp },
+      contact: { whatsapp, reviewUrl },
       seo: sanitize(input.seo, defaults.seo),
       legal: sanitize(input.legal, defaults.legal),
       ES: sanitize(input.ES, defaults.ES),

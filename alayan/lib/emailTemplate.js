@@ -79,6 +79,11 @@ ${logoUrl ? `<td style="padding-right:14px"><img src="${esc(logoUrl)}" width="52
 ${f.help ? `<tr><td style="padding:0 30px 30px"><p style="margin:0;padding-top:18px;border-top:1px solid ${LINE};font-family:${SANS};font-size:13px;line-height:1.6;color:${MUTED}">${esc(f.help)}</p>
 ${f.signature ? `<p style="margin:10px 0 0;font-family:${SERIF};font-size:16px;font-style:italic;color:${INK}">${esc(f.signature)}</p>` : ''}</td></tr>` : ''}
 
+${f.review ? `<tr><td style="padding:0 30px 28px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#fbf8f2;border:1px solid ${LINE};border-radius:12px"><tr>
+<td style="padding:14px 18px;font-family:${SANS};font-size:13px;line-height:1.5;color:${MUTED}">${esc(f.review.text)}</td>
+<td align="right" style="padding:14px 18px;white-space:nowrap"><a href="${esc(f.review.url)}" target="_blank" style="font-family:${SANS};font-size:13px;font-weight:bold;color:${GOLD_DARK};text-decoration:none">★★★★★ ${esc(f.review.label)}</a></td>
+</tr></table></td></tr>` : ''}
+
 ${contact || f.legal || links ? `<tr><td align="center" style="background:#141210;padding:26px 30px">
 ${contact ? `<div style="margin-bottom:10px">${contact}</div>` : ''}
 ${f.legal ? `<div style="font-family:${SANS};font-size:11px;line-height:1.6;color:#8f8676">${esc(f.legal)}</div>` : ''}

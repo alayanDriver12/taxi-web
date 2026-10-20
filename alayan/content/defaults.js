@@ -3,7 +3,7 @@
 // ES y EN deben tener siempre la misma estructura.
 
 module.exports = {
-  contact: { whatsapp: '34620331295' },
+  contact: { whatsapp: '34620331295', reviewUrl: 'https://g.page/r/CfUaGTGzNjJ3ECE/review' },
   seo: {
     title: 'Alayan Driver · Transfer en Andalucía',
     description: 'Transfers privados en Sevilla y toda Andalucía. Aeropuertos, estaciones, hoteles y eventos.'
@@ -238,6 +238,8 @@ module.exports = {
       signature: 'Alayan Driver · Transfer en Andalucía',
       button: { pay: 'Pagar {amount}', view: 'Ver mi reserva' },
       help: '¿Dudas o algún cambio? Responde a este email o escríbenos por WhatsApp.',
+      review: '¿Has viajado con nosotros? Tu opinión nos ayuda mucho:',
+      reviewButton: 'Valóranos en Google',
       received: {
         subject: 'Hemos recibido tu solicitud de reserva #{id}',
         body: `Hola, {name}:
@@ -551,6 +553,8 @@ Si crees que es un error o quieres reservar otra fecha, responde a este email o 
       signature: 'Alayan Driver · Transfers in Andalusia',
       button: { pay: 'Pay {amount}', view: 'View my booking' },
       help: 'Any questions or changes? Reply to this email or message us on WhatsApp.',
+      review: 'Travelled with us? Your feedback means a lot:',
+      reviewButton: 'Review us on Google',
       received: {
         subject: 'We have received your booking request #{id}',
         body: `Hello {name},

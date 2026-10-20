@@ -51,7 +51,7 @@ function PhoneIcon({ className = 'h-4 w-4' }) {
   );
 }
 
-export default function Guide({ whatsapp }) {
+export default function Guide({ whatsapp, reviewUrl }) {
   const [lang, setLang] = useState(initialLang);
   const [toast, setToast] = useState('');
   const t = TEXTS[lang], u = t.ui;
@@ -331,6 +331,9 @@ export default function Guide({ whatsapp }) {
                 </div>
               )}
             </div>
+            {reviewUrl && (
+              <a href={reviewUrl} target="_blank" rel="noopener" className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#c8a96a]/40 px-4 py-2 text-[12px] font-bold hover:bg-[#c8a96a] hover:text-black transition" style={{ color: gold }}>★★★★★ {u.review}</a>
+            )}
             <div className="mt-5 text-[11px] text-white/45">{u.rights.replace('{year}', new Date().getFullYear())}</div>
           </div>
         </div>

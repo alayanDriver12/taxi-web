@@ -661,7 +661,7 @@ app.get(['/guia', '/guide'], (req, res) => {
     if (e.code !== 'ENOENT') throw e;
     return res.status(503).send('Falta compilar la web: ejecuta <code>npm run build</code>.');
   }
-  const json = JSON.stringify({ whatsapp: content.get().contact.whatsapp });
+  const json = JSON.stringify({ whatsapp: content.get().contact.whatsapp, reviewUrl: content.get().contact.reviewUrl || '' });
   res.set({ 'Cache-Control': 'no-cache', 'X-Robots-Tag': 'noindex' });
   res.type('html').send(guiaTemplate.replace('<!--guia-->', `<script>window.__GUIA__=${json}</script>`));
 });

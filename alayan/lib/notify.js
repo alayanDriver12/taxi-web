@@ -70,6 +70,7 @@ function createNotifier({ content, mailer, payments, baseUrl, notifyEmail }) {
       tagline: t.brand.tagline,
       footer: {
         help: t.notify.help,
+        review: c.contact.reviewUrl ? { text: t.notify.review, label: t.notify.reviewButton, url: c.contact.reviewUrl } : null,
         signature: t.notify.signature,
         waUrl: c.contact.whatsapp ? `https://wa.me/${c.contact.whatsapp}` : '',
         phone: lg.phone,

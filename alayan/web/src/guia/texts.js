@@ -155,6 +155,7 @@ export const TEXTS = {
       }
     ],
     "ui": {
+      "review": "Valóranos en Google",
       "brandSub": "Sevilla • 24/7",
       "kicker": "GUÍA DEFINITIVA",
       "sideKicker": "ALAYAN DRIVER",
@@ -315,6 +316,7 @@ export const TEXTS = {
       }
     ],
     "ui": {
+      "review": "Review us on Google",
       "brandSub": "Seville • 24/7",
       "kicker": "DEFINITIVE GUIDE",
       "sideKicker": "ALAYAN DRIVER",
@@ -475,6 +477,7 @@ export const TEXTS = {
       }
     ],
     "ui": {
+      "review": "Recensiscici su Google",
       "brandSub": "Siviglia • 24/7",
       "kicker": "GUIDA DEFINITIVA",
       "sideKicker": "ALAYAN DRIVER",
@@ -635,6 +638,7 @@ export const TEXTS = {
       }
     ],
     "ui": {
+      "review": "Notez-nous sur Google",
       "brandSub": "Séville • 24/7",
       "kicker": "GUIDE DÉFINITIF",
       "sideKicker": "ALAYAN DRIVER",
