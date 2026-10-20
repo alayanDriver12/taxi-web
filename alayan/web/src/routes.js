@@ -162,6 +162,7 @@ function businessLd(data, baseUrl) {
     address: { '@type': 'PostalAddress', ...(lg.address ? { streetAddress: lg.address } : {}), addressLocality: 'Sevilla', addressRegion: 'Andalucía', addressCountry: 'ES' },
     areaServed: [{ '@type': 'City', name: 'Sevilla' }, { '@type': 'State', name: 'Andalucía' }],
     openingHoursSpecification: [{ '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'], opens: '00:00', closes: '23:59' }],
+    ...(() => { const same = [c.instagram].filter(Boolean); return same.length ? { sameAs: same } : {}; })(),
     priceRange: '€€',
     paymentAccepted: 'Credit Card, Debit Card, Apple Pay, Google Pay',
     currenciesAccepted: 'EUR'

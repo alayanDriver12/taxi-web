@@ -3,7 +3,7 @@
 // ES y EN deben tener siempre la misma estructura.
 
 module.exports = {
-  contact: { whatsapp: '34620331295', reviewUrl: 'https://g.page/r/CfUaGTGzNjJ3ECE/review' },
+  contact: { whatsapp: '34620331295', reviewUrl: 'https://g.page/r/CfUaGTGzNjJ3ECE/review', instagram: 'https://www.instagram.com/alayan.driver/' },
   seo: {
     title: 'Taxi Sevilla 24 h · Aeropuerto a precio fijo | Alayan Driver',
     description: 'Taxi en Sevilla 24 horas: aeropuerto SVQ a precio fijo, estación Santa Justa y traslados a toda Andalucía. Taxi 7 y 8 plazas para grupos. Reserva online o por WhatsApp.'

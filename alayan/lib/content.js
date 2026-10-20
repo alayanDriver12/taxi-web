@@ -152,9 +152,12 @@ function createContentStore(db) {
     // Enlace de reseñas de Google: solo https (lo copia el admin de su Perfil de Empresa)
     const reviewUrl = String(input?.contact?.reviewUrl ?? '').trim().slice(0, 300);
     if (reviewUrl && !/^https:[/][/][^ ]+$/.test(reviewUrl)) throw new Error('El enlace de reseñas debe empezar por https://');
+    // Instagram de la empresa: sale en el pie y en los datos para Google (misma empresa que la web y la ficha)
+    const instagram = String(input?.contact?.instagram ?? '').trim().slice(0, 300);
+    if (instagram && !/^https:[/][/][^ ]+$/.test(instagram)) throw new Error('El enlace de Instagram debe empezar por https://');
     return write({
       ...get(),
-      contact: { whatsapp, reviewUrl },
+      contact: { whatsapp, reviewUrl, instagram },
       seo: sanitize(input.seo, defaults.seo),
       legal: sanitize(input.legal, defaults.legal),
       ES: sanitize(input.ES, defaults.ES),

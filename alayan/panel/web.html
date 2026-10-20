@@ -291,6 +291,8 @@ function renderGeneral() {
     single('Número de WhatsApp', state.contact.whatsapp, v => { state.contact.whatsapp = v; },
       { hint: 'Con prefijo de país, sin «+» ni espacios. Ej: 34612345678. Lo usan el botón WA y «Consultar por WhatsApp».' }),
     h('p', {}, h('a', { href: '#', onclick: e => { e.preventDefault(); open('https://wa.me/' + state.contact.whatsapp.replace(/\D/g, '')); } }, 'Probar el enlace de WhatsApp ↗')),
+    single('Instagram de la empresa', state.contact.instagram || '', v => { state.contact.instagram = v; },
+      { hint: 'Enlace completo (https://www.instagram.com/…). Sale en el pie de la web y le dice a Google que la web, el Instagram y la ficha son la misma empresa. Vacío = no se muestra.' }),
     single('Enlace para reseñas de Google', state.contact.reviewUrl || '', v => { state.contact.reviewUrl = v; },
       { hint: 'Perfil de Empresa de Google → «Pedir reseñas» → copiar enlace (g.page/r/…/review). Sale en el pie de los emails y en la guía. Vacío = no se muestra.' }),
     h('h2', { style: 'margin-top:24px' }, 'Google (SEO)'),

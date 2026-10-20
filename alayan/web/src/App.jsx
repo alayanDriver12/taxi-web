@@ -51,7 +51,7 @@ export default function App({ content, url }) {
       {langButton('EN')}
     </div>
   );
-  const footer = <Footer t={t} img={img} lang={lang} p={content.pricing} />;
+  const footer = <Footer t={t} img={img} lang={lang} p={content.pricing} contact={content.contact} />;
 
   // Páginas secundarias (legales y pago): cabecera sencilla + pie
   if (legalPage || payToken || accountToken) {
@@ -340,7 +340,7 @@ export default function App({ content, url }) {
   );
 }
 
-function Footer({ t, img, lang, p }) {
+function Footer({ t, img, lang, p, contact }) {
   // Enlaces a las rutas más buscadas (también ayudan a Google a descubrir las páginas de traslados)
   const popular = routeList(p).filter(x => x.kind === "airport" || x.dest.type === "ciudad").slice(0, 9);
   const links = [['/aviso-legal', t.footer.legal.notice], ['/privacidad', t.footer.legal.privacy], ['/cookies', t.footer.legal.cookies], ['/condiciones', t.footer.legal.terms]];
@@ -360,6 +360,7 @@ function Footer({ t, img, lang, p }) {
             {t.footer.tagline} {t.footer.slogan}. {t.footer.description}
           </div>
           <div className="mt-6 serif italic text-[#C5A46A] text-[18px]">— {t.footer.firm}</div>
+          {contact?.instagram && <a href={contact.instagram} target="_blank" rel="noopener me" className="mt-4 inline-flex items-center gap-2 text-[12px] tracking-[0.15em] text-white/60 hover:text-white transition">INSTAGRAM ↗</a>}
         </div>
         <nav aria-label={t.routes.popularTitle} className="text-[12px] leading-relaxed">
           <div className="text-[11px] tracking-[0.2em] text-[#C5A46A] mb-3">{t.routes.popularTitle.toUpperCase()}</div>
