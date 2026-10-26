@@ -725,7 +725,7 @@ app.get(['/', '/index.html', '/en', '/traslados', '/traslados/:slug', '/en/trans
 // robots.txt y sitemap.xml (con las versiones ES/EN de cada página)
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send(INDEXABLE
-    ? ['User-agent: *', 'Allow: /', 'Disallow: /pago/', 'Disallow: /api/', 'Disallow: /admin', 'Disallow: /reservas', 'Disallow: /login', 'Disallow: /empresa/', 'Disallow: /guia', 'Disallow: /guide', '', `Sitemap: ${BASE_URL}/sitemap.xml`, ''].join('\n')
+    ? ['User-agent: *', 'Allow: /', 'Disallow: /pago/', 'Disallow: /cdn-cgi/', 'Disallow: /api/', 'Disallow: /admin', 'Disallow: /reservas', 'Disallow: /login', 'Disallow: /empresa/', 'Disallow: /guia', 'Disallow: /guide', '', `Sitemap: ${BASE_URL}/sitemap.xml`, ''].join('\n')
     : 'User-agent: *\nDisallow: /\n');
 });
 app.get('/sitemap.xml', async (req, res) => {

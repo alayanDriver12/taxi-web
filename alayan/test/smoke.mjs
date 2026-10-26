@@ -170,6 +170,7 @@ try {
   ok((await call('/')).data.includes('<title>Taxi Sevilla 24 h'), 'la portada se presenta a Google como «Taxi Sevilla 24 h»');
   ok((await call('/traslados/sevilla-malaga')).data.includes('<title>Taxi Sevilla – Málaga'), 'las rutas empiezan por «Taxi»');
   ok(sm.data.includes('/taxi-7-plazas-sevilla'), 'la página de 7-8 plazas está en el sitemap');
+  ok((await fetch(B + '/robots.txt').then(r => r.text())).length > 0, 'robots.txt responde');
 
   section('Permisos');
   ok((await call('/api/panel/users', { as: 'admin', body: { username: 'gestor1', name: 'Gestor', role: 'gestor', password: 'gestor-pass-1' } })).status < 300, 'el admin crea un gestor');
